@@ -1,0 +1,26 @@
+{
+  "name": "Almalik",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "type":"module",
+  "scripts": {
+    "client": "pnpm --filter client dev",
+    "server": "pnpm --filter server dev",
+    "dev": "concurrently \"pnpm client\" \"pnpm server\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devEngines": {
+    "packageManager": {
+      "name": "pnpm",
+      "version": "^11.13.1",
+      "onFail": "download"
+    }
+  },
+  "type": "module",
+  "devDependencies": {
+    "concurrently": "^10.0.3"
+  }
+}
