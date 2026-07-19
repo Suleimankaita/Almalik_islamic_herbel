@@ -10,9 +10,47 @@ import TopSellingProducts from './components/TopSellingProducts';
 import ExpiringSoon from './components/ExpiringSoon';
 import QuoteBanner from './components/QuoteBanner';
 import { statCards, miniStats } from './data';
+import { useEffect, useState } from 'react';
 
 export default function App() {
+  const Pname = "Assalamu Alaikum, Abdullahi";
 
+const [name, setName] = useState("");
+const [count, setCount] = useState(0);
+const [isBack, setBack] = useState(false);
+
+useEffect(() => {
+  const timer = setInterval(() => {
+    if (!isBack) {
+      setCount((prev) => {
+        const next = prev + 1;
+
+        setName(Pname.substring(0, next));
+
+        if (next >= Pname.length) {
+          setBack(true);
+        }
+
+        return next;
+      });
+    } 
+    // else {
+    //   setCount((prev) => {
+    //     const next = prev - 1;
+
+    //     setName(Pname.substring(0, next));
+
+    //     if (next <= 0) {
+    //       setBack(false);
+    //     }
+
+    //     return next;
+    //   });
+    // }
+  }, 100);
+
+  return () => clearInterval(timer);
+}, [isBack]);
   return (
     <div className="flex bg-[#F6F7F9]">
    
@@ -23,7 +61,7 @@ export default function App() {
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="flex items-center gap-2 text-[22px] font-extrabold text-gray-900">
-                Assalamu Alaikum, Abdullahi <span>👋</span>
+                {name} <span>👋</span>
               </h1>
               <p className="text-[13px] text-gray-500">Here's what's happening with your business today.</p>
             </div>
