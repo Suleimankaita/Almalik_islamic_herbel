@@ -1,3 +1,4 @@
+import { useSelector,useDispatch } from 'react-redux';
 import {
   LayoutDashboard,
   Package,
@@ -14,7 +15,9 @@ import {
   Leaf,
   type LucideIcon,
 } from 'lucide-react';
-
+import { SetToggle ,GetToggle} from '../Features/AppSlice';
+import { useEffect } from 'react';
+import { NavLink } from 'react-router-dom';
 interface NavItem {
   label: string;
   icon: LucideIcon;
@@ -36,13 +39,14 @@ const navItems: NavItem[] = [
   { label: 'Backup & Restore', icon: DatabaseBackup },
 ];
 
-interface SidebarProps {
-  Open: boolean;
-  SetOpen: React.Dispatch<React.SetStateAction<boolean>>;
-}
 
 
-export default function Sidebar({Open,SetOpen}:SidebarProps) {
+export default function Sidebar() {
+ 
+  const Open:boolean=useSelector(GetToggle)
+ 
+ 
+
   return (
     <div className= {` flex flex-col h-full`}>
       {/* Logo */}
@@ -68,7 +72,8 @@ export default function Sidebar({Open,SetOpen}:SidebarProps) {
             const Icon = item.icon;
             return (
               <li key={item.label}>
-                <button
+                <NavLink
+                to={'/'+item.label}
                   className={` flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13.5px] font-medium transition-colors ${
                     item.active
                       ? 'bg-brand-green text-white shadow-sm'
@@ -77,7 +82,7 @@ export default function Sidebar({Open,SetOpen}:SidebarProps) {
                 >
                   <Icon className={`${!Open?'w-full':null}`} size={`${Open?17:20}`} />
                   <span className={`${!Open?'hidden':'block'} transition-all ease-in-out`}>{item.label}</span>
-                </button>
+                </NavLink>
               </li>
             );
           })}

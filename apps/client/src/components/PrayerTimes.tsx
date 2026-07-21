@@ -1,12 +1,14 @@
 import { Settings, MapPin } from 'lucide-react';
 import { prayerTimes } from '../data';
+import {  useSelector } from 'react-redux';
+import { GetToggle } from '../Features/AppSlice';
 
-interface SideBars{
-  Open:boolean,
-  SetOpen:React.Dispatch<React.SetStateAction<boolean>>
-}
 
-export default function PrayerTimesWidget({Open,SetOpen}:SideBars) {
+export default function PrayerTimesWidget() {
+
+
+
+  const Open:boolean=useSelector(GetToggle)
   return (
     <div className={`${!Open?'hidden':'block'} px-4 pb-4`}>
       <div className="rounded-2xl border border-gray-200 bg-white p-4 shadow-sm">

@@ -1,18 +1,22 @@
 import { Menu, Search, Plus, ShoppingBag, PackagePlus, Bell, Mail, Moon, ChevronDown } from 'lucide-react';
+import { useDispatch, useSelector } from 'react-redux';
+import { GetToggle, SetToggle } from '../Features/AppSlice';
 
-interface SideBars{
-  Open:boolean,
-  SetOpen: React.Dispatch<React.SetStateAction<boolean>>
-} 
 
-export default function Header({Open,SetOpen}:SideBars): React.JSX.Element {
+export default function Header(): React.JSX.Element {
+  
+  const Open:boolean=useSelector(GetToggle)
+
+  const dispatch=useDispatch()
+
   return (
     <header className="w-full top-0 z-10 flex items-center gap-4 border-b border-gray-200 bg-white px-6 py-3.5">
       <button className="text-gray-500 hover:text-gray-700 lg:hidden">
-        <Menu onClick={()=>SetOpen(prev=>!prev)} size={20} />
+        <Menu onClick={()=>dispatch(SetToggle(false))} size={20} />
       </button>
       <button className="hidden text-gray-400 hover:text-gray-600 lg:block">
-        <Menu onClick={()=>SetOpen(prev=>!prev)} size={20} />
+        {Open?<Menu onClick={()=>dispatch(SetToggle(false))} size={20} />:<Menu onClick={()=>dispatch(SetToggle(true))} size={20} />}
+        
       </button>
 
       {/* Search */}
