@@ -18,6 +18,7 @@ import {
 import { SetToggle ,GetToggle} from '../Features/AppSlice';
 import { useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
+import Logo from "../assets/Logo.png"
 interface NavItem {
   label: string;
   icon: LucideIcon;
@@ -25,7 +26,7 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { label: 'Dashboard', icon: LayoutDashboard, active: true },
+  { label: 'Dashboard', icon: LayoutDashboard,},
   { label: 'Inventory', icon: Package },
   { label: 'Sales (POS)', icon: ShoppingCart },
   { label: 'Purchases', icon: Truck },
@@ -52,7 +53,8 @@ export default function Sidebar() {
       {/* Logo */}
       <div className={`${!Open?'hidden':'block'} transition-all ease-in-out flex items-center gap-3 px-6 py-6`}>
         <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand-greenLight">
-          <Leaf className="text-brand-green" size={22} />
+      <img src={Logo} width={100} height={100} className='rounded-full'/>
+          {/* <Leaf className="text-brand-green" size={22} /> */}
         </div>
         <div>
           <p className="text-[15px] font-extrabold leading-tight tracking-tight text-gray-900">
@@ -65,6 +67,10 @@ export default function Sidebar() {
         </div>
       </div>
 
+<div className={`${Open?'hidden':'block'} transition-all ease-in-out flex items-center gap-3 px-6 py-6`}>
+    <img src={Logo} width={100} height={100} className='rounded-full'/>
+</div>
+
       {/* Nav */}
       <nav className={`flex-col w-full ${Open?'justify-center':'justify-center'} flex-1 overflow-y-auto px-3 pb-4`}>
         <ul className={` space-y-1`}>
@@ -73,7 +79,7 @@ export default function Sidebar() {
             return (
               <li key={item.label}>
                 <NavLink
-                to={'/'+item.label}
+                to={ item.label==="Dashboard"?'/':'/'+item.label}
                   className={` flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13.5px] font-medium transition-colors ${
                     item.active
                       ? 'bg-brand-green text-white shadow-sm'

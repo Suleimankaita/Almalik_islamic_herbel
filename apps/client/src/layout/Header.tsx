@@ -11,8 +11,9 @@ export default function Header(): React.JSX.Element {
 
   return (
     <header className="w-full top-0 z-10 flex items-center gap-4 border-b border-gray-200 bg-white px-6 py-3.5">
-      <button className="text-gray-500 hover:text-gray-700 lg:hidden">
-        <Menu onClick={()=>dispatch(SetToggle(false))} size={20} />
+      <button className="text-gray-500 hover:text-gray-700 lg:hidden hover:cursor-alias">
+        {Open?<Menu onClick={()=>dispatch(SetToggle(true))} size={20} />:<Menu onClick={()=>dispatch(SetToggle(false))} size={20} />}
+        
       </button>
       <button className="hidden text-gray-400 hover:text-gray-600 lg:block">
         {Open?<Menu onClick={()=>dispatch(SetToggle(false))} size={20} />:<Menu onClick={()=>dispatch(SetToggle(true))} size={20} />}
