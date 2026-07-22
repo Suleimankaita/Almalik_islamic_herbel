@@ -11,8 +11,8 @@ const App = ():React.JSX.Element => {
       <Route element={<Layout/>}>
     <Route index path='/' element={<MS/>}/>    
     <Route index path='Inventory' element={<Inventory/>} />
+    <Route index path='/Inventory/ViewProucts/:id' element={<ViewProducts/>} />
     <Route index path='Sales (POS)' element={<Sale/>} />
-    <Route index path='View' element={<ViewProducts/>} />
       </Route>
     </Routes>
   )

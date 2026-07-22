@@ -4,6 +4,8 @@ import {
   Barcode, QrCode, AlertTriangle, Package, MapPin, 
   DollarSign, ShieldCheck, Save, ArrowDownLeft, ArrowUpRight, Clock
 } from 'lucide-react';
+import { useSelector } from 'react-redux';
+import { GetRoutes } from '../Features/AppSlice';
 
 // Sample initial product data
 const initialProduct = {
@@ -49,9 +51,9 @@ const stockHistoryLogs = [
 ];
 
 export default function ProductManagementView() {
-  const [activeTab, setActiveTab] = useState('view'); // 'view' | 'edit' | 'transfer' | 'history'
+    const Routes=useSelector(GetRoutes)
+  const [activeTab, setActiveTab] = useState(Routes||'view'); // 'view' | 'edit' | 'transfer' | 'history'
   const [product, setProduct] = useState(initialProduct);
-
   // Transfer form state
   const [transferData, setTransferData] = useState({
     fromLocation: "Shelf A3 (Main Store)",

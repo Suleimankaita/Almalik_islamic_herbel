@@ -21,3 +21,9 @@ body {
   background-color: #d1d5db;
   border-radius: 999px;
 }
+
+.active{
+  background-color: #d1d5db;
+  transition: all 0.5s ease-in-out ;
+  color: white;
+}

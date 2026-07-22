@@ -5,6 +5,9 @@ import {
   AlertCircle, TrendingUp
 } from 'lucide-react';
 import type { productsDatas } from '../types';
+import { useNavigate } from 'react-router-dom';
+import { useDispatch } from 'react-redux';
+import { SetRoutes } from '../Features/AppSlice';
 
 const productsData:productsDatas[] = [
   { 
@@ -65,7 +68,9 @@ const productsData:productsDatas[] = [
   },
 ];
 
-export default function AlMalikInventory():React.JSX.Element {
+export default function AlMalikInventory():React.JSX.
+Element {
+  const dispatch=useDispatch()
   const [selectedProduct, setSelectedProduct] = useState<productsDatas>(productsData[0]);
   const [SearchResult,SetSearch]=useState<string>('')
   const [Cate,setcate]=useState<string>('All Categories')
@@ -78,6 +83,10 @@ export default function AlMalikInventory():React.JSX.Element {
 
   return filteredProducts;
 }, [SearchResult, Cate, productsData]);
+
+  const navigate=useNavigate()
+
+
 
   
   return (
@@ -283,7 +292,7 @@ export default function AlMalikInventory():React.JSX.Element {
           
           <div className="flex flex-col gap-2.5">
             {[
-              { icon: Eye, label: 'View Product' },
+              { icon: Eye, label: 'View Product'  },
               { icon: Edit, label: 'Edit Details' },
               { icon: Copy, label: 'Duplicate' },
               { icon: Barcode, label: 'Print Barcode' },
@@ -292,7 +301,11 @@ export default function AlMalikInventory():React.JSX.Element {
               { icon: SlidersHorizontal, label: 'Adjust Inventory' },
               { icon: History, label: 'View History' },
             ].map((action, i) => (
-              <button key={i} className="flex items-center gap-3 w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 hover:shadow-sm transition-all text-sm font-medium text-gray-700">
+              <button onClick={()=>{
+                const ms=action.label==="View Product"?"view":action.label.startsWith("Edit")?"edit":action.label==="Transfer Stock"?"transfer":"history"
+                dispatch(SetRoutes(ms))
+
+                navigate(`/Inventory/ViewProucts/${selectedProduct?.id}`)}} key={i} className="flex items-center gap-3 w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 hover:shadow-sm transition-all text-sm font-medium text-gray-700">
                 <action.icon className="w-4 h-4 text-blue-600/70" />
                 {action.label}
               </button>
