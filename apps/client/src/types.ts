@@ -70,3 +70,19 @@ export interface PrayerTime {
   name: string;
   time: string;
 }
+
+
+export interface productsDatas{
+    id: number, 
+    image: string, 
+    name: string, 
+    sku: string, 
+    category: string, 
+    supplier: string,
+    stock: number, 
+    price: number,
+    status: string,
+    batch: string,
+    expiry: string,
+    desc: string
+}
