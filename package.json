@@ -3,12 +3,12 @@
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
-  "type":"module",
-  "scripts": {
-    "client": "pnpm --filter client dev",
-    "server": "pnpm --filter server dev",
-    "dev": "concurrently \"pnpm client\" \"pnpm server\""
-  },
+  "type": "module",
+"scripts": {
+  "dev": "turbo run dev",
+  "build": "turbo run build",
+  "lint": "turbo run lint"
+},
   "keywords": [],
   "author": "",
   "license": "ISC",
@@ -19,8 +19,8 @@
       "onFail": "download"
     }
   },
-  "type": "module",
   "devDependencies": {
-    "concurrently": "^10.0.3"
+    "concurrently": "^10.0.3",
+    "turbo": "^2.10.5"
   }
 }
