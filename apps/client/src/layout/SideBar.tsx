@@ -29,7 +29,7 @@ const navItems: NavItem[] = [
   { label: 'Dashboard', icon: LayoutDashboard,},
   { label: 'Inventory', icon: Package },
   { label: 'Sales (POS)', icon: ShoppingCart },
-  { label: 'Purchases', icon: Truck },
+  { label: 'Add Product', icon: Truck },
   { label: 'Customers', icon: Users },
   { label: 'Suppliers', icon: Building2 },
   { label: 'Expenses', icon: Receipt },
