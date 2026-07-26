@@ -2,6 +2,14 @@ import mongoose from "mongoose";
 
 const ProductSchema=new mongoose.Schema({
     ProductName:String,
+    img:{
+        type:String,
+        default:''
+    },
+    Quantity:{
+        type:Number,
+        default:0
+    },
     ActualPrice:{
         type:Number,
         default:0

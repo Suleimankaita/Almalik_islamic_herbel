@@ -1,6 +1,3 @@
-import Sidebar from './components/Sidebar';
-import PrayerTimesWidget from './components/PrayerTimes';
-import Header from './components/Header';
 import { StatCard, MiniStatCard } from './components/StatCard';
 import SalesOverview from './components/SalesOverview';
 import StockStatus from './components/StockStatus';
@@ -13,51 +10,27 @@ import { statCards, miniStats } from './data';
 import { useEffect, useState } from 'react';
 
 export default function App() {
-  const Pname = "Assalamu Alaikum, Abdullahi";
+  const Pname = 'Assalamu Alaikum, Abdullahi';
+  const [name, setName] = useState('');
 
-const [name, setName] = useState("");
-const [count, setCount] = useState(0);
-const [isBack, setBack] = useState(false);
+  useEffect(() => {
+    let next = 0;
+    const timer = window.setInterval(() => {
+      next += 1;
+      setName(Pname.slice(0, next));
 
-useEffect(() => {
-  const timer = setInterval(() => {
-    if (!isBack) {
-      setCount((prev) => {
-        const next = prev + 1;
+      if (next >= Pname.length) {
+        window.clearInterval(timer);
+      }
+    }, 100);
 
-        setName(Pname.substring(0, next));
+    return () => window.clearInterval(timer);
+  }, [Pname]);
 
-        if (next >= Pname.length) {
-          setBack(true);
-        }
-
-        return next;
-      });
-    } 
-    // else {
-    //   setCount((prev) => {
-    //     const next = prev - 1;
-
-    //     setName(Pname.substring(0, next));
-
-    //     if (next <= 0) {
-    //       setBack(false);
-    //     }
-
-    //     return next;
-    //   });
-    // }
-  }, 100);
-
-  return () => clearInterval(timer);
-}, [isBack]);
   return (
     <div className="flex bg-[#F6F7F9]">
-   
       <div className="flex min-w-0 flex-1 flex-col">
-
-        <main className="flex-1 space-y-5 p-6"> 
-          {/* Greeting */}
+        <main className="flex-1 space-y-5 p-6">
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="flex items-center gap-2 text-[22px] font-extrabold text-gray-900">
@@ -75,35 +48,30 @@ useEffect(() => {
             </div>
           </div>
 
-          {/* Primary stat cards */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {statCards.map((card) => (
               <StatCard key={card.id} data={card} />
             ))}
           </div>
 
-          {/* Secondary mini stat cards */}
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {miniStats.map((stat) => (
               <MiniStatCard key={stat.id} data={stat} />
             ))}
           </div>
 
-          {/* Sales Overview + Recent Transactions + Stock Status */}
           <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.1fr_1.1fr_0.8fr]">
             <SalesOverview />
             <RecentTransactions />
             <StockStatus />
           </div>
 
-           {/* Top Selling Products + Recent Purchases + Expiring Soon  */}
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
             <TopSellingProducts />
             <RecentPurchases />
             <ExpiringSoon />
-          </div> 
+          </div>
 
-          {/* Quote banner */}
           <QuoteBanner />
         </main>
       </div>

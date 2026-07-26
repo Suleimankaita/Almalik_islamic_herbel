@@ -1,4 +1,4 @@
-import { useSelector,useDispatch } from 'react-redux';
+﻿import { useSelector,useDispatch } from 'react-redux';
 import {
   LayoutDashboard,
   Package,
@@ -37,7 +37,7 @@ const navItems: NavItem[] = [
   { label: 'Notifications', icon: Bell },
   { label: 'Users & Roles', icon: UserCog },
   { label: 'Settings', icon: Settings },
-  { label: 'Backup & Restore', icon: DatabaseBackup },
+  // { label: 'Backup & Restore', icon: DatabaseBackup },
 ];
 
 
@@ -45,7 +45,7 @@ const navItems: NavItem[] = [
 export default function Sidebar() {
  
   const Open:boolean=useSelector(GetToggle)
- 
+  const dispatch=useDispatch()
  
 
   return (
@@ -65,6 +65,13 @@ export default function Sidebar() {
           </p>
           <p className="text-[9px] italic leading-tight text-gray-400">Healing through Sunnah</p>
         </div>
+             <button
+          className="rounded-lg p-2 text-gray-600 hover:bg-gray-100 hover:text-gray-900 lg:hidden"
+          onClick={() => dispatch(SetToggle(!Open ))}
+          aria-label="Close navigation"
+        >
+          ✕
+        </button>
       </div>
 
 <div className={`${Open?'hidden':'block'} transition-all ease-in-out flex items-center gap-3 px-6 py-6`}>

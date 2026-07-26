@@ -12,9 +12,9 @@ const Layout = () => {
   return (
     <main className="flex h-screen overflow-hidden bg-[#F6F7F9]">
       <div
-        className={`fixed inset-y-0 left-0 z-30 w-[85vw]  transform border-r border-gray-200 bg-white shadow-xl duration-300 lg:static transition-all lg:translate-x-0 lg:shadow-none ${
+        className={`fixed inset-y-0 left-0 z-30 w-[85vw] max-w-[280px] transform border-r border-gray-200 bg-white shadow-xl transition-transform duration-300 lg:static lg:w-[240px] lg:translate-x-0 lg:shadow-none ${
           Open ? "w-[240px] translate-x-0" : "-translate-x-full w-[100px]"
-        } overflow-auto  `}
+        } overflow-auto transition-all duration-300 `}
       >
         <div className="flex h-full flex-col">
           <Sidebar />

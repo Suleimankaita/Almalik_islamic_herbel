@@ -12,7 +12,10 @@ import Reg from "./Routes/Registration.js"
 import connected from "./Config/Connect.js";
 import { option } from "./Config/Origin.js";
 import Sales from "./Routes/Sales.js"
+import UserSales from "./Routes/GetAllUserSale.js"
 import GetAllUser from "./Routes/GetAllUser.js";
+import Product from "./Routes/Product.js";
+import fsp from "fs/promises"
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
@@ -24,7 +27,11 @@ app.use(
 );
 
 app.use(cookie_parser());
+
+app.use(express.static(path.join(__dirname,"Public")))
+
 app.use(express.json());
+
 app.use(express.urlencoded({ extended: true }));
 
 const storage = multer.diskStorage({
@@ -32,7 +39,7 @@ const storage = multer.diskStorage({
   filename: (req, file, cb) => cb(null, `${Date.now()}_${file.originalname}`),
 });
 
-const upload = multer({ storage });
+const upload = multer({ storage:storage });
 
 app.use((req, res, next) => {
   console.log(req.method, req.url);
@@ -53,11 +60,16 @@ console.log("MongoDB connected")
  
     app.use("/api/auth", authRoutes);
     
+  
     app.use("/api/auth", Reg);
 
     app.use("/api", GetAllUser);
 
     app.use("/api", Sales);
+    
+    app.use("/api", UserSales);
+
+    app.use("/api/Product",upload.single('file'), Product);
 
 
   });

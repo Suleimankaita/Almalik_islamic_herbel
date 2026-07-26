@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
-import { 
-  Eye, Edit3, ArrowRightLeft, History, Check, X, 
-  Barcode, QrCode, AlertTriangle, Package, MapPin, 
-  DollarSign, ShieldCheck, Save, ArrowDownLeft, ArrowUpRight, Clock
+import { useState } from 'react';
+import {
+  Eye, Edit3, ArrowRightLeft, History,
+  Barcode, QrCode, ArrowDownLeft, ArrowUpRight, Clock
 } from 'lucide-react';
 import { useSelector } from 'react-redux';
 import { GetRoutes } from '../Features/AppSlice';

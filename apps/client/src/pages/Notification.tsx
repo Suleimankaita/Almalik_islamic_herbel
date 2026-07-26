@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { 
-  Bell, Check, Trash2, ShoppingBag, PackageX, 
-  ShieldAlert, Sparkles, MoreVertical, CheckCircle2, 
-  Filter, Clock, ArrowRight, Settings
+import { useState } from 'react';
+import {
+  Bell, Check, Trash2, ShoppingBag, PackageX,
+  ShieldAlert, Sparkles, CheckCircle2,
+  Filter, Clock, ArrowRight
 } from 'lucide-react';
 
 // --- Types & Initial Data ---

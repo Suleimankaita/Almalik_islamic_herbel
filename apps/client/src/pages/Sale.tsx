@@ -1,7 +1,7 @@
-import React, { useState, useMemo } from 'react';
-import { 
-  Search, User, Plus, Minus, Trash2, CreditCard, Banknote, 
-  Smartphone, ShoppingCart, Percent, Printer, Box, X, ChevronRight, Tags
+import { useState, useMemo } from 'react';
+import {
+  Search, User, Plus, Minus, Trash2, CreditCard, Banknote,
+  Smartphone, ShoppingCart, Box, X, ChevronRight
 } from 'lucide-react';
 
 // --- Types ---

@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
-import { 
-  BarChart3, TrendingUp, TrendingDown, DollarSign, 
-  ShoppingCart, Calendar, Download, Filter, RefreshCw, 
+import { useState } from 'react';
+import {
+  BarChart3, TrendingUp, TrendingDown, DollarSign,
+  ShoppingCart, Calendar, Download, RefreshCw,
   CreditCard, Package, ArrowUpRight, ArrowDownRight, MoreHorizontal,
   ChevronDown
 } from 'lucide-react';

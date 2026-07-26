@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { 
   Search, Filter, Eye, Edit, Copy, QrCode, Barcode, 
   ArrowRightLeft, SlidersHorizontal, History, Trash2, Archive,

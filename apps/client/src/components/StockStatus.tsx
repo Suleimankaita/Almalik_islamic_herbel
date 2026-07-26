@@ -26,7 +26,10 @@ export default function StockStatus() {
                 ))}
               </Pie>
               <Tooltip
-                formatter={(value: number, name: string) => [`${value.toLocaleString()} units`, name]}
+                formatter={(value: unknown, name: unknown) => {
+                  const numericValue = typeof value === 'number' ? value : Number(value ?? 0);
+                  return [`${numericValue.toLocaleString()} units`, String(name ?? '')];
+                }}
               />
             </PieChart>
           </ResponsiveContainer>

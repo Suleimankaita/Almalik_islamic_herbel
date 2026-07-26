@@ -1,26 +1,35 @@
 import React from 'react'
-import { Routes,Route } from 'react-router-dom'
+import { Routes, Route } from 'react-router-dom'
 import Layout from './layout/Layout'
-import MS from "./m"
+import DashboardHome from './m'
 import Inventory from './pages/Inventory'
 import Sale from './pages/Sale'
-import ViewProducts from "./pages/ViewProducts"
+import ViewProducts from './pages/ViewProducts'
 import PurchaseOrderForm from './pages/PurchaseOrderForm'
 import Customers from './pages/Customers'
 import ReportsDashboard from './pages/ReportsDashboard'
 import NotificationCenter from './pages/Notification'
-const App = ():React.JSX.Element => {
+import SettingsPage from './pages/Settings'
+import ExpenseHistory from './pages/ExpenseHistory'
+import UsersAndRolesPage from './pages/UsersAndRoles'
+import SuppliersPage from './pages/Supplies'
+
+const App = (): React.JSX.Element => {
   return (
     <Routes>
-      <Route element={<Layout/>}>
-    <Route index path='/' element={<MS/>}/>    
-    <Route index path='Inventory' element={<Inventory/>} />
-    <Route index path='/Inventory/ViewProucts/:id' element={<ViewProducts/>} />
-    <Route index path='Sales (POS)' element={<Sale/>} />
-    <Route index path='Add Product' element={<PurchaseOrderForm/>} />
-    <Route index path='Customers' element={<Customers/>} />
-    <Route index path='Reports' element={<ReportsDashboard/>} />
-    <Route index path='Notifications' element={<NotificationCenter/>} />
+      <Route element={<Layout />}>
+        <Route path='/' element={<DashboardHome />} />
+        <Route path='/inventory' element={<Inventory />} />
+        <Route path='/inventory/view-products/:id' element={<ViewProducts />} />
+        <Route path='/sales' element={<Sale />} />
+        <Route path='/add-product' element={<PurchaseOrderForm />} />
+        <Route path='/customers' element={<Customers />} />
+        <Route path='/reports' element={<ReportsDashboard />} />
+        <Route path='/notifications' element={<NotificationCenter />} />
+        <Route path='/settings' element={<SettingsPage />} />
+        <Route path='/expenses' element={<ExpenseHistory />} />
+        <Route path='/users-and-roles' element={<UsersAndRolesPage />} />
+        <Route path='/suppliers' element={<SuppliersPage />} />
       </Route>
     </Routes>
   )

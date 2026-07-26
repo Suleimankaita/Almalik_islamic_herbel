@@ -1,12 +1,12 @@
-import React, { useState } from 'react';
-import { 
-  Package, DollarSign, Barcode, Layers, UploadCloud, Save, 
-  CheckCircle2, ArrowLeft, Tag, ShieldCheck, AlertTriangle, 
-  Eye, Plus, Trash2, ChevronDown, Image as ImageIcon, Info
+import { useState } from 'react';
+import {
+  Package, DollarSign, Barcode, Layers, UploadCloud,
+  CheckCircle2, ArrowLeft, Tag, ShieldCheck, AlertTriangle,
+  Plus, Trash2, ChevronDown, Image as ImageIcon, Info
 } from 'lucide-react';
 
 export default function AddProduct() {
-  const [productType, setProductType] = useState('physical');
+
   const [variants, setVariants] = useState([
     { id: '1', name: '500ml', sku: 'BSO-500', price: '4000', stock: '120' }
   ]);
@@ -192,7 +192,7 @@ export default function AddProduct() {
               </div>
 
               <div className="space-y-3">
-                {variants.map((v, index) => (
+                {variants.map((v) => (
                   <div key={v.id} className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-center bg-gray-50 p-3 sm:p-4 rounded-xl border border-gray-200">
                     <div className="sm:col-span-3">
                       <label className="block sm:hidden text-[10px] font-bold text-gray-400 uppercase">Variant Name</label>
