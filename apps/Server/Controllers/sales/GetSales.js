@@ -15,6 +15,7 @@ const GetSalesUserSales = asynchandler(async (req, res) => {
       path: "UserProfile",
       populate: {
         path: "Sales",
+        path: "Logs",
       },
     });
 

@@ -16,10 +16,13 @@ import UserSales from "./Routes/GetAllUserSale.js"
 import GetAllUser from "./Routes/GetAllUser.js";
 import Product from "./Routes/Product.js";
 import fsp from "fs/promises"
+import Refresh from "./Routes/Refresh.js"
+import Logout from "./Routes/logout.js"
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
 const PORT = process.env.PORT || 3500;
+
 connected()
 
 app.use(
@@ -62,6 +65,10 @@ console.log("MongoDB connected")
     
   
     app.use("/api/auth", Reg);
+  
+    app.use("/api/auth", Refresh);
+  
+    app.use("/api/auth/Logout", Logout);
 
     app.use("/api", GetAllUser);
 

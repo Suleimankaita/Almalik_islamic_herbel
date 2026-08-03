@@ -3,6 +3,7 @@ import Sales from "../../models/Sales.js";
 import User from "../../models/User.js";
 import asynchanler from "express-async-handler";
 import Product from "../../models/Product.js";
+import UserActivity from "../../models/UserActivity.js";
 
 const Sale=asynchanler(async(req,res)=>{
    try{
@@ -73,6 +74,7 @@ for (const cartItem of items) {
         
         userFound.UserProfile?.Sales.push(sale._id)
         
+        
         total += product.SalePrice * cartItem.quantity;
 
         product.Quantity -= cartItem.quantity;
@@ -83,15 +85,15 @@ for (const cartItem of items) {
 }
 
 // Second pass: decrement quantity
-// for (const cartItem of items) {
+        console.log(productIds)
+        const Activityid=await UserActivity.create({
+                Username:userFound.Username,
+                  ActivtyType:"Sale",
+                  ItemId:productIds
+                  })  
 
-//     const product = foundProducts.find(
-//         p => p._id.toString() === cartItem.id
-//     );
-
-  
-// }
-    
+              userFound.UserProfile?.Logs.push(Activityid);
+              await userFound.save()
 
     
     res.status(200).json({message:'Sale completed successfully',total})

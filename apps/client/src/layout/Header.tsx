@@ -1,7 +1,7 @@
 import { Menu, Search, Plus, ShoppingBag, PackagePlus, Bell, Mail, Moon, ChevronDown } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
 import { GetToggle, SetToggle } from '../Features/AppSlice';
-
+import img from "../assets/man.png"
 export default function Header(): React.JSX.Element {
   const Open = useSelector(GetToggle);
   const dispatch = useDispatch();
@@ -78,12 +78,12 @@ export default function Header(): React.JSX.Element {
 
         <button className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-gray-50">
           <img
-            src="https://i.pravatar.cc/64?img=13"
-            alt="Abdullahi"
+            src={img}
+            alt="Suleiman"
             className="h-9 w-9 rounded-full object-cover"
           />
           <div className="hidden text-left xl:block">
-            <p className="text-[13px] font-semibold leading-tight text-gray-900">Abdullahi</p>
+            <p className="text-[13px] font-semibold leading-tight text-gray-900">{"Suleiman"}</p>
             <p className="text-[11px] leading-tight text-gray-400">Administrator</p>
           </div>
           <ChevronDown size={14} className="hidden text-gray-400 xl:block" />

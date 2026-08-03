@@ -2,6 +2,7 @@ import User from "../../models/User.js";
 import asynchandler from "express-async-handler";
 import Checkfields from "../../../../packages/utils/FieldCheck.ts";
 import jwt from "jsonwebtoken";
+import UserActivity from "../../models/UserActivity.js";
 
 const Login = asynchandler(async (req, res) => {
   const { Username, Password } = req.body;
@@ -21,6 +22,13 @@ const Login = asynchandler(async (req, res) => {
     return res.status(400).json({ message: "Incorrect Username or Password" });
   }
 
+      const Activityid=await UserActivity.create({
+        Username:userFound.Username,
+          ActivtyType:"Login"
+          })  
+      userFound.UserProfile?.Logs.push(Activityid);
+      await userFound.save()
+    
   const accessTokenSecret = process.env.ACCESS_TOKEN_SECRET || "dev-access-token";
   const refreshTokenSecret = process.env.REFRESH_TOKEN_SECRET || "dev-refresh-token";
 

@@ -27,3 +27,9 @@ body {
   transition: all 0.5s ease-in-out ;
   color: white;
 }
+
+.imgs{
+  background-image: url('./assets/Herbel.png');
+  background-size: cover;
+  background-position: center;
+}

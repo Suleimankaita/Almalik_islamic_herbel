@@ -13,16 +13,19 @@ import SettingsPage from './pages/Settings'
 import ExpenseHistory from './pages/ExpenseHistory'
 import UsersAndRolesPage from './pages/UsersAndRoles'
 import SuppliersPage from './pages/Supplies'
+import Login from './pages/AlmalikAuthScreen'
 
 const App = (): React.JSX.Element => {
   return (
     <Routes>
+      <Route path='/login' element={<Login />} />
+
       <Route element={<Layout />}>
         <Route path='/' element={<DashboardHome />} />
         <Route path='/inventory' element={<Inventory />} />
         <Route path='/inventory/view-products/:id' element={<ViewProducts />} />
-        <Route path='/sales' element={<Sale />} />
-        <Route path='/add-product' element={<PurchaseOrderForm />} />
+        <Route path='/Sales (POS)' element={<Sale />} />
+        <Route path='/add product' element={<PurchaseOrderForm />} />
         <Route path='/customers' element={<Customers />} />
         <Route path='/reports' element={<ReportsDashboard />} />
         <Route path='/notifications' element={<NotificationCenter />} />

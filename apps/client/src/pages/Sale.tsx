@@ -101,7 +101,7 @@ export default function POS() {
   };
 
   return (
-    <div className="flex flex-col lg:flex-row h-screen bg-gray-100 text-gray-800 font-sans selection:bg-green-100 overflow-hidden">
+    <div className=" flex flex-col lg:flex-row h-screen bg-gray-100 text-gray-800 font-sans selection:bg-green-100 overflow-hidden">
       
       {/* ================= LEFT PANEL (Products & Search) ================= */}
       <div className="flex-1 flex flex-col h-full overflow-hidden bg-gray-50/50">
@@ -190,7 +190,7 @@ export default function POS() {
       </div>
 
       {/* ================= RIGHT PANEL (Always Visible Cart & Checkout) ================= */}
-      <aside className="w-full lg:w-[420px] bg-white border-t lg:border-t-0 lg:border-l border-gray-200 flex flex-col shadow-2xl lg:shadow-none z-20 flex-none h-[85vh] lg:h-full rounded-t-3xl lg:rounded-none fixed lg:relative bottom-0 transition-transform duration-300">
+      <aside className="w-full lg:w-[320px] bg-white border-t lg:border-t-0 lg:border-l border-gray-200 flex flex-col shadow-2xl lg:shadow-none z-20 flex-none h-[85vh] lg:h-full rounded-t-3xl lg:rounded-none fixed lg:relative bottom-0 transition-transform duration-300">
         
         {/* Header / Customer */}
         <div className="flex-none p-5 border-b border-gray-100 bg-white">

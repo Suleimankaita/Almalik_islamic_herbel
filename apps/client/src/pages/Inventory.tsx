@@ -259,10 +259,10 @@ Element {
             {/* Financial & Certifications Grid */}
             <div className="grid grid-cols-2 gap-y-4 gap-x-4 text-sm mb-6 pb-6 border-b border-gray-100">
               <div className="text-gray-500">Purchase Price</div>
-              <div className="font-medium text-gray-900">${(selectedProduct.price * 0.6).toFixed(2)}</div>
+              <div className="font-medium text-gray-900">₦{(selectedProduct.price * 0.6).toFixed(2)}</div>
               
               <div className="text-gray-500">Selling Price</div>
-              <div className="font-bold text-green-700 text-base">${selectedProduct.price.toFixed(2)}</div>
+              <div className="font-bold text-green-700 text-base">₦{selectedProduct.price.toFixed(2)}</div>
               
               <div className="text-gray-500">Stock Quantity</div>
               <div className="font-medium text-gray-900">{selectedProduct.stock} Units</div>

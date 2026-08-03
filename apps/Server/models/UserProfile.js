@@ -10,6 +10,7 @@ const UserProfileSchema = new mongoose.Schema(
       type: String,
       default: "Staff",
     },
+    
     Sales: [
       {
         type: mongoose.Schema.Types.ObjectId,
