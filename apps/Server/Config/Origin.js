@@ -1,4 +1,4 @@
-const allowed=["*","http://localhost:3500"];
+const allowed=["*","http://localhost:3500",'http://localhost:5173'];
 
 export const option ={
     origin:(origin,cb)=>{

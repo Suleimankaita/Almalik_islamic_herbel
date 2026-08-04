@@ -9,7 +9,6 @@ export default function Header() {
       <button className="hidden text-gray-400 hover:text-gray-600 lg:block">
         <Menu size={20} />
       </button>
-
       {/* Search */}
       <div className="flex flex-1 items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 max-w-md">
         <Search size={16} className="text-gray-400" />

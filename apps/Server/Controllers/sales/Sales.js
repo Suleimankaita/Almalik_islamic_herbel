@@ -84,7 +84,7 @@ for (const cartItem of items) {
         await userFound?.UserProfile.save();
 }
 
-// Second pass: decrement quantity
+// Second pass: decrement quantity 08037491303
         console.log(productIds)
         const Activityid=await UserActivity.create({
                 Username:userFound.Username,

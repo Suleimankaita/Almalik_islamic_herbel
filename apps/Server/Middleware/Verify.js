@@ -13,7 +13,7 @@ const Verify = asynchandler(async (req, res, next) => {
     const token = auth.split(" ")[1];
     const decode = jwt.verify(token, process.env.ACCESS_TOKEN_SECRET || "dev-access-token");
     const { Username, Role, id } = decode.UserInfo || {};
-
+    // console.log(decode)
     req.Username = Username;
     req.id = id;
     req.Roles = Role;

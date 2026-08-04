@@ -6,11 +6,14 @@ const RefreshToken=asynchandler(async(req,res)=>{
     if(!token)res.status(403).json({message:'No token To Verify'})
 
         const decode=jwt.verify(token,process.env.REFRESH_TOKEN_SECRET);
-
+        const {id,Role,Username}=decode?.UserInfo
+        
+        console.log(decode)
         const accesstoken=jwt.sign({
             UserInfo:{
-                id:decode.id,
-                Role:decode.Role
+                id,
+                Role,
+                Username
             }
         },
         process.env.ACCESS_TOKEN_SECRET
@@ -19,8 +22,9 @@ const RefreshToken=asynchandler(async(req,res)=>{
     })
         const refreshtoken=jwt.sign({
             UserInfo:{
-                id:decode.id,
-                Role:decode.Role
+                id,
+                Role,
+                Username
             }
         },
         process.env.REFRESH_TOKEN_SECRET

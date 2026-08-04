@@ -1,9 +1,36 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Mail, Lock, Eye, EyeOff, ShieldCheck, Leaf, Crown } from 'lucide-react';
 import Herbel from "../assets/Herbel.png"
+import { useLoginMutation } from '../Features/api/DataSlice';
+import { useDispatch } from 'react-redux';
+import { setToken } from '../Features/AppSlice';
+import {toast, ToastContainer} from "react-toastify"
+import {useNavigate} from 'react-router-dom';
 export default function AlmalikAuthScreen() {
-  const [showPassword, setShowPassword] = useState(false);
+    const [Login,{isLoading,isSuccess}]=useLoginMutation();
+    const navigate=useNavigate()
+    const [Username,SetUsername]=useState<string>('')
+    
+    const [Password,SetPassword]=useState<string>('')
+  
+    const [showPassword, setShowPassword] = useState(false);
+
+    const dispatch=useDispatch()
+
+    useEffect(()=>{
+      if(isSuccess){
+        navigate('/')
+      }
+    },[isSuccess,navigate])
+    const HandleSubmit=async()=>{
+                try{
+                const ms=await Login({Username,Password}).unwrap()
+                dispatch(setToken(ms?.accessToken))
+            }catch(err:any){
+              toast.error(err?.data?.message||err.message)
+                }
+              }
 
   // Framer Motion Animation Variants
   const fadeUp = {
@@ -28,8 +55,8 @@ export default function AlmalikAuthScreen() {
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#F8F9F7] font-sans">
-      
+    <div className={` min-h-screen w-full flex flex-col lg:flex-row bg-[#F8F9F7] font-sans`}>
+      <ToastContainer/>
       {/* LEFT PANEL - Branding & Hero (Hidden on smaller screens) */}
       <div className={`imgs hidden lg:flex w-1/2 relative bg-[#F5F4F0] overflow-hidden flex-col justify-between`}>
         {/* Decorative Background Image Setup */}
@@ -89,9 +116,10 @@ export default function AlmalikAuthScreen() {
                   <Mail className="h-5 w-5 text-gray-400 stroke-[1.5]" />
                 </div>
                 <input
-                  type="email"
+                onChange={(e)=>SetUsername(e.target.value)}
+                  type="text"
                   className="block w-full pl-11 pr-4 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1c3a27]/20 focus:border-[#1c3a27] transition-all outline-none text-gray-800 bg-white text-sm"
-                  placeholder="Enter your email"
+                  placeholder="Enter your Username"
                 />
               </div>
             </motion.div>
@@ -104,9 +132,12 @@ export default function AlmalikAuthScreen() {
                   <Lock className="h-5 w-5 text-gray-400 stroke-[1.5]" />
                 </div>
                 <input
+                onChange={(e)=>SetPassword(e.target.value)}
+                  
                   type={showPassword ? 'text' : 'password'}
                   className="block w-full pl-11 pr-12 py-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#1c3a27]/20 focus:border-[#1c3a27] transition-all outline-none text-gray-800 bg-white text-sm"
                   placeholder="Enter your password"
+
                 />
                 <button
                   type="button"
@@ -128,6 +159,7 @@ export default function AlmalikAuthScreen() {
             {/* Submit Button with subtle inner leaf watermark */}
             <motion.div variants={fadeUp}>
               <button 
+              onClick={HandleSubmit}
                 type="submit"
                 className="relative overflow-hidden w-full bg-[#1c3a27] text-white py-3.5 rounded-lg font-medium transition-all hover:bg-[#152e1e] hover:shadow-md active:scale-[0.98] group"
               >

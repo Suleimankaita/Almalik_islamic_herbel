@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import Layout from './layout/Layout'
 import DashboardHome from './m'
@@ -14,13 +14,16 @@ import ExpenseHistory from './pages/ExpenseHistory'
 import UsersAndRolesPage from './pages/UsersAndRoles'
 import SuppliersPage from './pages/Supplies'
 import Login from './pages/AlmalikAuthScreen'
-
+import PersistLogin from './Features/Persistance'
 const App = (): React.JSX.Element => {
-  return (
+
+return (
     <Routes>
       <Route path='/login' element={<Login />} />
 
+       <Route element={<PersistLogin />}>
       <Route element={<Layout />}>
+
         <Route path='/' element={<DashboardHome />} />
         <Route path='/inventory' element={<Inventory />} />
         <Route path='/inventory/view-products/:id' element={<ViewProducts />} />
@@ -33,7 +36,10 @@ const App = (): React.JSX.Element => {
         <Route path='/expenses' element={<ExpenseHistory />} />
         <Route path='/users-and-roles' element={<UsersAndRolesPage />} />
         <Route path='/suppliers' element={<SuppliersPage />} />
+     
       </Route>
+       </Route>
+
     </Routes>
   )
 }
