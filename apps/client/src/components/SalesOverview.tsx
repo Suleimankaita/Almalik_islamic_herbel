@@ -1,6 +1,5 @@
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { ChevronDown } from 'lucide-react';
-import { salesOverview } from '../data';
 import type { SalesPoint } from '../types';
 
 function formatNaira(value: number) {
@@ -17,8 +16,25 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
   );
 }
 
-export default function SalesOverview() {
-  const total = salesOverview.reduce((sum: number, p: SalesPoint) => sum + p.sales, 0);
+interface Props {
+  sales?: SalesPoint[];
+  isLoading?: boolean;
+  isEmpty?: boolean;
+}
+
+export default function SalesOverview({ sales = [], isLoading = false, isEmpty = false }: Props) {
+  const chartData = Array.isArray(sales) && sales.length ? sales : [];
+  const total = chartData.reduce((sum: number, p: SalesPoint) => sum + (p?.sales ?? 0), 0);
+
+  if (isLoading) {
+    return (
+      <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+        <div className="mb-4 h-5 w-32 rounded bg-gray-100" />
+        <div className="mb-3 h-8 w-24 rounded bg-gray-100" />
+        <div className="h-55 w-full animate-pulse rounded-xl bg-gray-50" />
+      </div>
+    );
+  }
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -36,12 +52,13 @@ export default function SalesOverview() {
         </p>
       </div>
       <p className="mb-4 flex items-center gap-1 text-[12px] font-semibold text-emerald-600">
-        Total Sales <span>↑ 16.4% vs last month</span>
+        Total Sales <span>{isEmpty ? 'No sales for selected range' : 'Live results from your transactions'}</span>
       </p>
 
-      <div className="h-[220px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
-          <AreaChart data={salesOverview} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
+      {chartData.length ? (
+        <div className="h-55 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={chartData} margin={{ top: 5, right: 5, left: -20, bottom: 0 }}>
             <defs>
               <linearGradient id="salesGradient" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#22C55E" stopOpacity={0.25} />
@@ -73,8 +90,13 @@ export default function SalesOverview() {
               activeDot={{ r: 4, fill: '#22C55E' }}
             />
           </AreaChart>
-        </ResponsiveContainer>
-      </div>
+            </ResponsiveContainer>
+          </div>
+        ) : (
+          <div className="flex h-55 items-center justify-center rounded-xl border border-dashed border-gray-200 bg-gray-50 text-[13px] text-gray-500">
+            No sales data available for this range.
+          </div>
+        )}
     </div>
   );
 }

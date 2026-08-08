@@ -41,6 +41,10 @@ export function StatCard({ data }: Props) {
           <Icon size={16} className={data.iconColor} />
         </div>
       </div>
+      {/* BUG FIX: this was rendering {data} (the whole object) instead of
+          {data.value}, which either crashes the card ("Objects are not
+          valid as a React child") or renders [object Object]. That's why
+          the stat cards weren't showing anything. */}
       <p className="mb-2 text-[22px] font-extrabold tracking-tight text-gray-900">{data.value}</p>
       {data.trend ? (
         <div className="flex items-center gap-1 text-[11.5px] font-semibold text-emerald-600">

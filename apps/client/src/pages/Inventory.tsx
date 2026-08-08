@@ -1,91 +1,86 @@
-import React, { useMemo, useState } from 'react';
-import { 
-  Search, Filter, Eye, Edit, Copy, QrCode, Barcode, 
+import React, { useEffect, useMemo, useState } from 'react';
+import {
+  Search, Filter, Eye, Edit, Copy, QrCode, Barcode,
   ArrowRightLeft, SlidersHorizontal, History, Trash2, Archive,
   AlertCircle, TrendingUp
 } from 'lucide-react';
 import type { productsDatas } from '../types';
 import { useNavigate } from 'react-router-dom';
-import { useDispatch } from 'react-redux';
-import { SetRoutes } from '../Features/AppSlice';
+import { useDispatch, useSelector } from 'react-redux';
+import { SetRoutes, GetToken } from '../Features/AppSlice';
+import { useGetAllProductsQuery } from '../Features/api/DataSlice';
 
-const productsData:productsDatas[] = [
-  { 
-    id: 1005, 
-    image: '🌿', 
-    name: 'Premium Black Seed Oil', 
-    sku: 'BS-OIL-500', 
-    category: 'Black Seed', 
-    supplier: 'Green Heritage Farms',
-    stock: 250, 
-    price: 24.99,
-    status: 'Available',
-    batch: 'BS-2024-11',
-    expiry: '2025-10-15',
-    desc: 'Premium cold-pressed black seed oil sourced from organic farms. Known for its high thymoquinone content, this traditional remedy supports immune health.'
-  },
-  { 
-    id: 1004, 
-    image: '🍯', 
-    name: 'Premium Honey 250g', 
-    sku: 'HON-250', 
-    category: 'Honey', 
-    supplier: 'Golden Hives Co.',
-    stock: 50, 
-    price: 18.50,
-    status: 'Low Stock',
-    batch: 'HON-2024-02',
-    expiry: '2026-05-20',
-    desc: 'Pure, unfiltered raw mountain honey. Naturally crystallized and rich in antioxidants.'
-  },
-  { 
-    id: 1003, 
-    image: '🫖', 
-    name: 'Herbal Tea Blend', 
-    sku: 'TEA-001', 
-    category: 'Herbs', 
-    supplier: 'Nature Extracts',
-    stock: 200, 
-    price: 12.00,
-    status: 'Available',
-    batch: 'TEA-2024-08',
-    expiry: '2025-12-01',
-    desc: 'A soothing blend of chamomile, mint, and proprietary herbs to support digestion and relaxation.'
-  },
-  { 
-    id: 1006, 
-    image: '🧴', 
-    name: 'Olive Oil Lotion', 
-    sku: 'OO-LOT-100', 
-    category: 'Honey', 
-    supplier: 'Olea Botanicals',
-    stock: 0, 
-    price: 15.99,
-    status: 'Out of Stock',
-    batch: 'OO-2024-01',
-    expiry: '2025-06-10',
-    desc: 'Hydrating body lotion infused with extra virgin olive oil and vitamin E.'
-  },
-];
+interface BackendProduct {
+  _id?: string;
+  id?: string;
+  ProductName?: string;
+  SKU?: string | number;
+  Categpry?: string;
+  Supplier?: string;
+  Quantity?: number;
+  ActualPrice?: number;
+  SalePrice?: number;
+  img?: string;
+  ExpiryDate?: string;
+  ManufactureDate?: string;
+  Barcode?: number | string;
+  Date?: string;
+  Time?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
 
-export default function AlMalikInventory():React.JSX.
-Element {
-  const dispatch=useDispatch()
-  const [selectedProduct, setSelectedProduct] = useState<productsDatas>(productsData[0]);
-  const [SearchResult,SetSearch]=useState<string>('')
-  const [Cate,setcate]=useState<string>('All Categories')
- 
-  const data = useMemo(() => {
-  const filteredProducts = productsData.filter((res) =>
-    res.name.toLowerCase().trim().includes(SearchResult.toLowerCase().trim()) &&
-    (Cate === "All Categories" || res.category === Cate)
+export default function AlMalikInventory() {
+  const dispatch = useDispatch();
+  const token = useSelector(GetToken);
+  const navigate = useNavigate();
+
+  const [SearchResult, SetSearch] = useState<string>('');
+  const [Cate, setcate] = useState<string>('All Categories');
+  const [selectedProduct, setSelectedProduct] = useState<productsDatas | null>(null);
+
+  const { data, isLoading, isError, refetch } = useGetAllProductsQuery(
+    { token },
+    {  pollingInterval: 1000, refetchOnFocus: true }
   );
 
-  return filteredProducts;
-}, [SearchResult, Cate, productsData]);
+  const productsData = useMemo(() => {
+    const rawProducts = Array.isArray(data?.products) ? data.products : [];
+    return rawProducts.map((item: BackendProduct) => ({
+      id: Number(item._id || item.id || 0),
+      image: item.img ?item?.img : '🧾',
+      name: item.ProductName || 'Unnamed product',
+      sku: String(item.SKU || '—'),
+      category: item.Categpry || 'Uncategorized',
+      supplier: item.Supplier || '—',
+      stock: Number(item.Quantity ?? 0),
+      price: Number(item.SalePrice ?? item.ActualPrice ?? 0),
+      status: Number(item.Quantity ?? 0) > 5 ? 'Available' : Number(item.Quantity ?? 0) > 0 ? 'Low Stock' : 'Out of Stock',
+      batch: item.Barcode ? String(item.Barcode) : '—',
+      expiry: item.ExpiryDate || '—',
+      desc: `${item.ProductName || 'Product'} is currently ${Number(item.Quantity ?? 0) > 0 ? 'in stock' : 'out of stock'}.`,
+    })) as productsDatas[];
+  }, [data]);
 
-  const navigate=useNavigate()
+  const filteredProducts = useMemo(() => {
+    return productsData.filter((res) => {
+      const searchText = SearchResult.toLowerCase().trim();
+      const matchesSearch = !searchText || res.name.toLowerCase().includes(searchText) || res.sku.toLowerCase().includes(searchText);
+      const matchesCategory = Cate === 'All Categories' || res.category === Cate;
+      return matchesSearch && matchesCategory;
+    });
+  }, [productsData, SearchResult, Cate]);
 
+  React.useEffect(() => {
+    if (filteredProducts.length && !selectedProduct) {
+      setSelectedProduct(filteredProducts[0]);
+    }
+  }, [filteredProducts, selectedProduct]);
+
+
+  useEffect(()=>{
+    console.log(selectedProduct)
+  },[selectedProduct])
 
 
   
@@ -139,7 +134,14 @@ Element {
           {/* Data Table */}
           <div className="bg-white border border-gray-200 rounded-xl overflow-hidden shadow-sm">
             <div className="overflow-x-auto">
-              {data.length?(
+              {isLoading ? (
+                <div className="flex h-40 items-center justify-center text-sm text-gray-500">Loading products...</div>
+              ) : isError ? (
+                <div className="flex h-40 flex-col items-center justify-center gap-2 text-sm text-red-600">
+                  <span>Could not load products from the server.</span>
+                  <button onClick={() => refetch()} className="font-semibold underline">Retry</button>
+                </div>
+              ) : filteredProducts.length ? (
 
               <table className="w-full text-sm text-left">
                 <thead className="bg-gray-50/80 text-gray-600 font-semibold border-b border-gray-200">
@@ -155,24 +157,25 @@ Element {
                 </thead>
                 <tbody className="divide-y divide-gray-100">
                   
-                  {data.map((prod) => (
+                  {filteredProducts.map((prod) => (
                     <tr 
                       key={prod.id} 
                       onClick={() => setSelectedProduct(prod)}
-                      className={`cursor-pointer hover:bg-gray-50 transition-colors ${selectedProduct.id === prod.id ? 'bg-blue-50/40' : ''}`}
+                      className={`cursor-pointer hover:bg-gray-50 transition-colors ${selectedProduct?.id === prod.id ? 'bg-blue-50/40' : ''}`}
                     >
                       <td className="px-4 py-3.5">
-                        <input type="checkbox" checked={selectedProduct.id === prod.id} readOnly className="rounded text-blue-600 cursor-pointer" />
+                        <input type="checkbox" checked={selectedProduct?.id === prod.id} readOnly className="rounded text-blue-600 cursor-pointer" />
                       </td>
                       <td className="px-4 py-3.5 font-medium text-gray-900">{prod.id}</td>
                       <td className="px-4 py-3.5 flex items-center gap-3">
                         <div className="w-9 h-9 flex items-center justify-center bg-gray-100 rounded-lg border border-gray-200 text-lg">
-                          {prod.image}
+                          <img className="w-full h-full object-cover" src={`${import.meta.env.VITE_URI}/img/${prod.image}`} alt="" />
+                          {/* {prod.image} */}
                         </div>
                         <span className="font-medium text-gray-900">{prod.name}</span>
                       </td>
                       <td className="px-4 py-3.5 text-gray-500">{prod.sku}</td>
-                      <td className="px-4 py-3.5 text-gray-500">{prod.category}</td>
+                      <td className="px-4 py-3.5 text-gray-500">{prod?.category}</td>
                       <td className="px-4 py-3.5 text-gray-900 font-medium">{prod.stock}</td>
                       <td className="px-4 py-3.5">
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold tracking-wide ${
@@ -184,12 +187,12 @@ Element {
                         </span>
                       </td>
                     </tr>
-                  ))
+                  ))}
                   
                   }
                 </tbody>
               </table>
-              ):(
+              ) : (
                 <main className='w-full bg-slate-100 h-16 flex justify-center items-center '>
                   <h1>Product Not found <span className='text-amber-950'>{SearchResult}</span></h1>
                 </main>
@@ -210,16 +213,17 @@ Element {
             {/* Header / Main Info */}
             <div className="flex gap-6 mb-8">
               <div className="w-32 h-40 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-200 text-6xl shadow-inner">
-                {selectedProduct.image}
+                <img className="w-full h-full" src={`${import.meta.env.VITE_URI}/img/${selectedProduct?.image}`} alt="" />
+                {/* {selectedProduct?.image || '📦'} */}
               </div>
               <div className="flex-1 space-y-3">
                 <div className="flex items-start justify-between">
                   <div>
                     <div className="text-xs font-bold text-amber-600 mb-1.5 tracking-widest uppercase">Legendary</div>
-                    <h3 className="text-xl font-bold text-gray-900 leading-tight">{selectedProduct.name}</h3>
+                    <h3 className="text-xl font-bold text-gray-900 leading-tight">{selectedProduct?.name || 'No product selected'}</h3>
                   </div>
                   <div className="text-sm font-medium text-gray-400 bg-gray-50 px-2.5 py-1 rounded-md border border-gray-100">
-                    ID: {selectedProduct.id}
+                    ID: {selectedProduct?.id || '—'}
                   </div>
                 </div>
                 
@@ -227,7 +231,7 @@ Element {
                   <div className="text-gray-500">Scientific Name</div>
                   <div className="font-medium text-gray-900 italic">Nigella sativa</div>
                   <div className="text-gray-500">SKU</div>
-                  <div className="font-medium text-gray-900">{selectedProduct.sku}</div>
+                  <div className="font-medium text-gray-900">{selectedProduct?.sku || '—'}</div>
                   <div className="text-gray-500">Barcode</div>
                   <div className="font-medium text-gray-900 flex items-center gap-2">
                     662123456789 <Barcode className="w-4 h-4 text-gray-400"/>
@@ -239,33 +243,33 @@ Element {
             {/* General Info Grid */}
             <div className="grid grid-cols-2 gap-y-4 gap-x-4 text-sm mb-6 pb-6 border-b border-gray-100">
               <div className="text-gray-500">Category</div>
-              <div className="font-medium text-gray-900">{selectedProduct.category}</div>
+              <div className="font-medium text-gray-900">{selectedProduct?.category || '—'}</div>
               
               <div className="text-gray-500">Supplier</div>
-              <div className="font-medium text-gray-900">{selectedProduct.supplier}</div>
+              <div className="font-medium text-gray-900">{selectedProduct?.supplier || '—'}</div>
               
               <div className="text-gray-500">Batch</div>
-              <div className="font-medium text-gray-900">{selectedProduct.batch}</div>
+              <div className="font-medium text-gray-900">{selectedProduct?.batch || '—'}</div>
               
               <div className="text-gray-500">Manufacture Date</div>
               <div className="font-medium text-gray-900">2024-05-10</div>
               
               <div className="text-gray-500">Expiry Date</div>
               <div className="font-medium text-red-600 flex items-center gap-1.5">
-                {selectedProduct.expiry} <AlertCircle className="w-4 h-4" />
+                {selectedProduct?.expiry || '—'} <AlertCircle className="w-4 h-4" />
               </div>
             </div>
 
             {/* Financial & Certifications Grid */}
             <div className="grid grid-cols-2 gap-y-4 gap-x-4 text-sm mb-6 pb-6 border-b border-gray-100">
               <div className="text-gray-500">Purchase Price</div>
-              <div className="font-medium text-gray-900">₦{(selectedProduct.price * 0.6).toFixed(2)}</div>
+              <div className="font-medium text-gray-900">₦{((selectedProduct?.price || 0) * 0.6).toFixed(2)}</div>
               
               <div className="text-gray-500">Selling Price</div>
-              <div className="font-bold text-green-700 text-base">₦{selectedProduct.price.toFixed(2)}</div>
+              <div className="font-bold text-green-700 text-base">₦{(selectedProduct?.price || 0).toFixed(2)}</div>
               
               <div className="text-gray-500">Stock Quantity</div>
-              <div className="font-medium text-gray-900">{selectedProduct.stock} Units</div>
+              <div className="font-medium text-gray-900">{selectedProduct?.stock || 0} Units</div>
               
               <div className="text-gray-500">Halal Certified</div>
               <div className="font-medium text-gray-900">Yes</div>
@@ -278,7 +282,7 @@ Element {
             <div className="mt-auto">
               <div className="text-sm font-semibold text-gray-900 mb-2.5">Product Description</div>
               <p className="text-sm text-gray-600 leading-relaxed bg-gray-50 p-4 rounded-lg border border-gray-100">
-                {selectedProduct.desc}
+                {selectedProduct?.desc || 'No description available.'}
               </p>
             </div>
           </div>
@@ -305,7 +309,7 @@ Element {
                 const ms=action.label==="View Product"?"view":action.label.startsWith("Edit")?"edit":action.label==="Transfer Stock"?"transfer":"history"
                 dispatch(SetRoutes(ms))
 
-                navigate(`/Inventory/ViewProucts/${selectedProduct?.id}`)}} key={i} className="flex items-center gap-3 w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 hover:shadow-sm transition-all text-sm font-medium text-gray-700">
+                navigate(`/Inventory/ViewProucts/${selectedProduct?.id || 0}`)}} key={i} className="flex items-center gap-3 w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 hover:shadow-sm transition-all text-sm font-medium text-gray-700">
                 <action.icon className="w-4 h-4 text-blue-600/70" />
                 {action.label}
               </button>

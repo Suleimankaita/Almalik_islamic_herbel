@@ -70,7 +70,51 @@ const DataSlice = ApiSlice.injectEndpoints({
                 url:'/api/auth/refresh',
                 method:'POST'
             })
-        })
+        }),
+        GetAllProducts:builder.query({
+            query:({token})=>({
+                url:'/api/Product',
+                method:'GET',
+                headers:{
+                    authorization:`Bearer ${token}`
+                }
+            })
+        }),
+        GetTransactions:builder.query({
+            query:({token, page = 1, limit = 10, startDate, endDate})=>{
+                const params = new URLSearchParams({
+                    page: String(page),
+                    limit: String(limit),
+                });
+
+                if (startDate) params.set('startDate', startDate);
+                if (endDate) params.set('endDate', endDate);
+
+                return {
+                    url:`/api/transactions?${params.toString()}`,
+                    method:'GET',
+                    headers:{
+                        authorization:`Bearer ${token}`
+                    }
+                };
+            }
+        }),
+        GetTopSales:builder.query({
+            query:({token, limit = 5, startDate, endDate})=>{
+                const params = new URLSearchParams({ limit: String(limit) });
+
+                if (startDate) params.set('startDate', startDate);
+                if (endDate) params.set('endDate', endDate);
+
+                return {
+                    url:`/api/top-sales?${params.toString()}`,
+                    method:'GET',
+                    headers:{
+                        authorization:`Bearer ${token}`
+                    }
+                };
+            }
+        }),
     })
 });
 
@@ -79,7 +123,10 @@ const DataSlice = ApiSlice.injectEndpoints({
 export const {
     useGetAllDataQuery,
     useLoginMutation,
-    useRefreshTokenMutation
+    useRefreshTokenMutation,
+    useGetAllProductsQuery,
+    useGetTransactionsQuery,
+    useGetTopSalesQuery,
 } = DataSlice;
 
 

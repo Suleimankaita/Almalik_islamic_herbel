@@ -1,11 +1,38 @@
 import { useState } from 'react';
 import { recentTransactions } from '../data';
 
+interface TransactionRow {
+  id?: string;
+  _id?: string;
+  invoice?: string;
+  customer?: string;
+  amount?: string | number;
+  time?: string;
+  status?: string;
+  ProductName?: string;
+  SalePrice?: number;
+  Quantity?: number;
+  Date?: string;
+  Time?: string;
+  User?: { Username?: string } | string;
+}
+
 const tabs = ['Sales', 'Purchases', 'Stock Movements'] as const;
 type Tab = (typeof tabs)[number];
 
-export default function RecentTransactions() {
+export default function RecentTransactions({ transactions = [], isLoading = false }: { transactions?: TransactionRow[]; isLoading?: boolean }) {
   const [activeTab, setActiveTab] = useState<Tab>('Sales');
+
+  const displayTransactions = transactions.length
+    ? transactions.map((tx, index) => ({
+        id: tx.id || tx._id || `tx-${index}`,
+        invoice: tx.invoice || `INV-${String(tx._id || index + 1).slice(-4).toUpperCase()}`,
+        customer: tx.customer || (typeof tx.User === 'object' ? tx.User?.Username : tx.User) || tx.ProductName || 'Customer',
+        amount: tx.amount || `₦${((Number(tx.SalePrice || 0) * Number(tx.Quantity || 1))).toLocaleString()}`,
+        time: tx.time || tx.Time || tx.Date || '—',
+        status: tx.status || 'Paid',
+      }))
+    : recentTransactions;
 
   return (
     <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -33,7 +60,7 @@ export default function RecentTransactions() {
       {activeTab === 'Sales' ? (
         <table className="w-full text-left">
           <tbody>
-            {recentTransactions.map((tx) => (
+            {displayTransactions.map((tx) => (
               <tr key={tx.id} className="border-b border-gray-50 last:border-0">
                 <td className="py-2.5 text-[13px] font-semibold text-gray-800">{tx.invoice}</td>
                 <td className="py-2.5 text-[13px] text-gray-500">{tx.customer}</td>

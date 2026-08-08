@@ -14,6 +14,7 @@ import ExpenseHistory from './pages/ExpenseHistory'
 import UsersAndRolesPage from './pages/UsersAndRoles'
 import SuppliersPage from './pages/Supplies'
 import Login from './pages/AlmalikAuthScreen'
+import Manager from './components/ManagerDash'
 import PersistLogin from './Features/Persistance'
 const App = (): React.JSX.Element => {
 
@@ -26,6 +27,7 @@ return (
 
         <Route path='/' element={<DashboardHome />} />
         <Route path='/inventory' element={<Inventory />} />
+        <Route path='/ma' element={<Manager />} />
         <Route path='/inventory/view-products/:id' element={<ViewProducts />} />
         <Route path='/Sales (POS)' element={<Sale />} />
         <Route path='/add product' element={<PurchaseOrderForm />} />

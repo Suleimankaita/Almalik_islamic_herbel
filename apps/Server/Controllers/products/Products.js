@@ -12,15 +12,15 @@ export const CreateProduct = asyncHandler(async (req, res) => {
     const {
         ProductName,
         ActualPrice,
-        SalePrice
+        SalePrice,
+        Quantity,
     } = req.body;
-    const img=req.file?.filename
-    console.log(img)
+    const img = req.file?.filename || "";
+
     const checkInput = Checkfields({
         ProductName,
         ActualPrice,
         SalePrice,
-        img
     });
 
     if (!checkInput.success) {
@@ -30,8 +30,17 @@ export const CreateProduct = asyncHandler(async (req, res) => {
         });
     }
 
+    const normalizedQuantity = Quantity === undefined || Quantity === null ? 0 : Number(Quantity);
+
+    if (!Number.isFinite(normalizedQuantity) || normalizedQuantity < 0) {
+        return res.status(400).json({
+            success: false,
+            message: "Quantity must be a valid non-negative number.",
+        });
+    }
+
     const productExist = await Product.findOne({
-        ProductName: ProductName.trim(),
+        ProductName: String(ProductName).trim(),
     });
 
     if (productExist) {
@@ -42,16 +51,18 @@ export const CreateProduct = asyncHandler(async (req, res) => {
     }
 
     const product = await Product.create({
-        ProductName: ProductName.trim(),
-        ActualPrice,
-        SalePrice,
-        img
+        ProductName: String(ProductName).trim(),
+        ActualPrice: Number(ActualPrice),
+        SalePrice: Number(SalePrice),
+        Quantity: normalizedQuantity,
+        img,
     });
 
     res.status(201).json({
         success: true,
         message: "Product created successfully.",
         product,
+        lowStock: normalizedQuantity <= 5,
     });
 });
 

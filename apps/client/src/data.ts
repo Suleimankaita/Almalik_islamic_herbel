@@ -107,22 +107,9 @@ export const miniStats: MiniStatData[] = [
 ];
 
 export const salesOverview: SalesPoint[] = [
-  { date: 'May 1', sales: 180000 },
-  { date: 'May 3', sales: 220000 },
-  { date: 'May 5', sales: 195000 },
-  { date: 'May 7', sales: 260000 },
-  { date: 'May 9', sales: 230000 },
-  { date: 'May 11', sales: 280000 },
-  { date: 'May 13', sales: 250000 },
-  { date: 'May 15', sales: 300000 },
-  { date: 'May 17', sales: 270000 },
-  { date: 'May 19', sales: 240000 },
-  { date: 'May 21', sales: 290000 },
-  { date: 'May 23', sales: 330000 },
-  { date: 'May 25', sales: 310000 },
-  { date: 'May 27', sales: 350000 },
-  { date: 'May 29', sales: 300000 },
-  { date: 'May 31', sales: 380000 },
+  { date: 'May 1', 
+    sales: 180000
+   },
 ];
 
 export const recentTransactions: Transaction[] = [

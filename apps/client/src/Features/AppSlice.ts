@@ -44,7 +44,6 @@ const initialState:intialstates={
                     if(result){
                         const {Role,id,Username}:DecodedToken =result?.UserInfo
                         state.UserDetails={Role,id,Username}
-                        console.log(result)
                     }
                 } catch (err) {
                     console.error('Invalid token:', err);
