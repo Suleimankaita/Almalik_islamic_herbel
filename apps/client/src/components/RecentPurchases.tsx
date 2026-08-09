@@ -4,6 +4,7 @@ interface PurchaseRow {
   poNumber?: string;
   supplier?: string;
   amount?: string | number;
+  SalePrice?: string | number;
   date?: string;
   createdAt?: string;
   ProductName?: string;
@@ -20,7 +21,7 @@ export default function RecentPurchases({ purchases = [], isLoading = false }: P
         id: p.id || p._id || 'purchase',
         poNumber: p.poNumber || p.ProductName || 'Purchase',
         supplier: p.supplier || 'Supplier',
-        amount: p.amount ? `₦${Number(p.amount).toLocaleString()}` : '₦0',
+        amount: p.SalePrice ? `₦${Number(p?.SalePrice).toLocaleString()}` : '₦0',
         date: p.date || p.createdAt || '—',
       }))
     : [];

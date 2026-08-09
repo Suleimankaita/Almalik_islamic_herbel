@@ -147,6 +147,19 @@ const DataSlice = ApiSlice.injectEndpoints({
             },
             providesTags: (result, error, arg):any => [{ type: "Products" as const, id: arg.id }]
         }),
+        GetAllUser: builder.query({
+            query:({token,id}:{token?: string; id:string})=>{
+                const headers: Record<string, string> = {};
+                if (token) headers.authorization = `Bearer ${token}`;
+
+                return {
+                    url:`/api/AllUsers/`,
+                    method:'GET',
+                    headers: Object.keys(headers).length ? headers : undefined
+                };
+            },
+            providesTags: (result, error, arg):any => [{ type: "Products" as const, id: arg.id }]
+        }),
         UpdateProduct: builder.mutation({
             query:({token,id,product}:{token?: string; id:string; product:any})=>{
                 const headers: Record<string, string> = {};
@@ -283,6 +296,7 @@ export const {
     useCreateSaleMutation,
     useGetTransactionsQuery,
     useGetTopSalesQuery,
+    useGetAllUserQuery,
     useRegistrationMutation
 } = DataSlice;
 
