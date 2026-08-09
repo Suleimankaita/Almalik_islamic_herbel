@@ -15,6 +15,7 @@ import Sales from "./Routes/Sales.js"
 import UserSales from "./Routes/GetAllUserSale.js"
 import GetAllUser from "./Routes/GetAllUser.js";
 import Product from "./Routes/Product.js";
+import UserSettings from "./Routes/UserSettings.js";
 import fsp from "fs/promises"
 import Refresh from "./Routes/Refresh.js"
 import Logout from "./Routes/logout.js"
@@ -25,8 +26,17 @@ const PORT = process.env.PORT || 3500;
 
 connected()
 
+// app.use(
+//   // cors(option)
+  
+// );
+
+
 app.use(
-  cors(option)
+    cors({
+        origin: true,
+        credentials: true,
+    })
 );
 
 app.use(cookie_parser());
@@ -56,29 +66,40 @@ app.use((req, res, next) => {
     });
 
 
-mongoose.connection.once('open',()=>{
+    
+    
+    
+    mongoose.connection.once('open',()=>{
 console.log("MongoDB connected")
-  app.listen(PORT, () => {
+  app.listen(PORT,"0.0.0.0", () => {
     console.log(`Server running on port ${PORT}`);
- 
-    app.use("/api/auth", authRoutes);
-    
-  
-    app.use("/api/auth", Reg);
-  
-    app.use("/api/auth", Refresh);
-  
-    app.use("/api/auth/Logout", Logout);
-
-    app.use("/api", GetAllUser);
-
-    app.use("/api", Sales);
-    
-    app.use("/api", UserSales);
-
-    app.use("/api/Product",upload.single('file'), Product);
-
 
   });
-
 })
+
+    // app.use("/api/Product",upload.single('img'), Product);
+
+    app.use(
+    "/api/Product",
+    upload.single("img"),
+    Product
+  );
+
+
+  
+ app.use("/api/auth", authRoutes);
+ 
+
+ app.use("/api/auth", Reg);
+
+ app.use("/api/auth", Refresh);
+
+ app.use("/api/auth/Logout", Logout);
+
+ app.use("/api", GetAllUser);
+
+ app.use("/api", Sales);
+ 
+ app.use("/api", UserSales);
+
+ app.use("/api",upload.single('file'), UserSettings);

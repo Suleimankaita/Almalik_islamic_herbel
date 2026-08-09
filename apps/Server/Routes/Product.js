@@ -6,6 +6,7 @@ import {
     UpdateProduct,
     GetTopSales,
     DeleteProduct,
+    SetProductStatus,
 } from "../controllers/products/GetProducts.js";
 import Verify from "../Middleware/Verify.js";
 const router = express.Router();
@@ -15,6 +16,7 @@ router.get("/", Verify,GetProducts);
 router.get("/TopSelling", Verify,GetTopSales);
 router.get("/:id", Verify, GetProduct);
 router.put("/:id", Verify, UpdateProduct);
+router.patch("/:id/status", Verify, SetProductStatus);
 router.delete("/:id", Verify, DeleteProduct);
 
 export default router;

@@ -65,23 +65,166 @@ const DataSlice = ApiSlice.injectEndpoints({
 
             })
         }),
+        Registration:builder.mutation({
+            query:({Username,Password,FirstName,LastName,Role}):any=>({
+                url:'/api/auth/Reg',
+                method:'POST',
+                body:{Username,Password,FirstName,LastName,Role}
+
+            })
+        }),
         RefreshToken:builder.mutation({
             query:()=>({
                 url:'/api/auth/refresh',
                 method:'POST'
             })
         }),
+        GetUserSettings: builder.query({
+            query: ({id}) => ({
+                url: 'api/profile',
+                method: 'GET',
+            }),
+            providesTags: (result): any =>
+                result ? [{ type: 'USER' as const, id: 'CURRENT' }] : [{ type: 'USER' as const, id: 'CURRENT' }],
+        }),
+        UpdateUserSettings: builder.mutation({
+            query: (body: any) => ({
+                url: 'api/profile',
+                method: 'PUT',
+                body,
+            }),
+            invalidatesTags: [{ type: 'USER' as const, id: 'CURRENT' }],
+        }),
+        ChangeUserPassword: builder.mutation({
+            query: ({ newPassword }: { newPassword: string }) => ({
+                url: 'api/profile/password',
+                method: 'PUT',
+                body: { newPassword },
+            }),
+        }),
+        DeleteUserAccount: builder.mutation({
+            query: () => ({
+                url: 'api/profile',
+                method: 'DELETE',
+            }),
+        }),
         GetAllProducts:builder.query({
-            query:({token})=>({
-                url:'/api/Product',
-                method:'GET',
-                headers:{
-                    authorization:`Bearer ${token}`
-                }
-            })
+            query:({token, filter = 'all', threshold}: { token?: string; filter?: string; threshold?: number })=>{
+                const params = new URLSearchParams();
+                if (filter) params.set('filter', filter);
+                if (threshold !== undefined) params.set('threshold', String(threshold));
+
+                const headers: Record<string, string> = {};
+                if (token) headers.authorization = `Bearer ${token}`;
+
+                return {
+                    url:`/api/Product?${params.toString()}`,
+                    method:'GET',
+                    headers: Object.keys(headers).length ? headers : undefined
+                };
+            },
+            providesTags: (result):any =>
+                result?.products
+                    ? [
+                        ...result.products.map((product:any) => ({
+                            type: "Products" as const,
+                            id: product._id || product.id
+                        })),
+                        { type: "Products" as const, id: "LIST" }
+                    ]
+                    : [{ type: "Products" as const, id: "LIST" }]
+        }),
+        GetProduct: builder.query({
+            query:({token,id}:{token?: string; id:string})=>{
+                const headers: Record<string, string> = {};
+                if (token) headers.authorization = `Bearer ${token}`;
+
+                return {
+                    url:`/api/Product/${id}`,
+                    method:'GET',
+                    headers: Object.keys(headers).length ? headers : undefined
+                };
+            },
+            providesTags: (result, error, arg):any => [{ type: "Products" as const, id: arg.id }]
+        }),
+        UpdateProduct: builder.mutation({
+            query:({token,id,product}:{token?: string; id:string; product:any})=>{
+                const headers: Record<string, string> = {};
+                if (token) headers.authorization = `Bearer ${token}`;
+
+                return {
+                    url:`/api/Product/${id}`,
+                    method:'PUT',
+                    body: product,
+                    headers:{
+                        authorization:`Bearer ${token}`
+                    }
+                };
+            },
+            invalidatesTags: (result, error, arg):any => [
+                { type: "Products" as const, id: arg.id },
+                { type: "Products" as const, id: "LIST" }
+            ]
+        }),
+         CreateProduct: builder.mutation({
+        query: ({ formData, token }) => ({
+        url: `/api/Product`,
+        method: "POST",
+        body: formData,
+        headers: {
+        
+            authorization:`Bearer ${token}`
+        
+        },
+    }),
+
+    invalidatesTags: [
+        {
+            type: "Products",
+            id: "LIST",
+        },
+    ],
+}),
+        SetProductStatus: builder.mutation({
+            query: ({ token, id, status }: { token?: string; id: string; status: 'Active' | 'Inactive' }) => {
+                const headers: Record<string, string> = {};
+                if (token) headers.authorization = `Bearer ${token}`;
+
+                return {
+                    url: `/api/Product/${id}/status`,
+                    method: 'PATCH',
+                    body: { Status: status },
+                    headers: Object.keys(headers).length ? headers : undefined,
+                };
+            },
+            invalidatesTags: (result, error, arg): any => [
+                { type: "Products" as const, id: arg.id },
+                { type: "Products" as const, id: "LIST" },
+            ],
+        }),
+        CreateSale: builder.mutation({
+            query: (body: any) => ({
+                url: `/api/sales`,
+                method: 'POST',
+                body,
+            }),
+            invalidatesTags: [{ type: "Products" as const, id: "LIST" }]
+        }),
+        DeleteProduct: builder.mutation({
+            query:({token,id}:{token?: string; id:string})=>{
+                const headers: Record<string, string> = {};
+                if (token) headers.authorization = `Bearer ${token}`;
+
+                return {
+                    url:`/api/Product/${id}`,
+                    method:'DELETE',
+                    headers: Object.keys(headers).length ? headers : undefined
+                };
+            },
+            invalidatesTags: [{ type: "Products" as const, id: "LIST" }]
         }),
         GetTransactions:builder.query({
-            query:({token, page = 1, limit = 10, startDate, endDate})=>{
+            query:({token, page = 1, limit = 10, startDate, endDate, productName}:{token?: string; page?: number; limit?: number; startDate?: string; endDate?: string; productName?: string})=>{
                 const params = new URLSearchParams({
                     page: String(page),
                     limit: String(limit),
@@ -89,13 +232,15 @@ const DataSlice = ApiSlice.injectEndpoints({
 
                 if (startDate) params.set('startDate', startDate);
                 if (endDate) params.set('endDate', endDate);
+                if (productName) params.set('productName', productName);
+
+                const headers: Record<string, string> = {};
+                if (token) headers.authorization = `Bearer ${token}`;
 
                 return {
                     url:`/api/transactions?${params.toString()}`,
                     method:'GET',
-                    headers:{
-                        authorization:`Bearer ${token}`
-                    }
+                    headers: Object.keys(headers).length ? headers : undefined
                 };
             }
         }),
@@ -106,12 +251,13 @@ const DataSlice = ApiSlice.injectEndpoints({
                 if (startDate) params.set('startDate', startDate);
                 if (endDate) params.set('endDate', endDate);
 
+                const headers: Record<string, string> = {};
+                if (token) headers.authorization = `Bearer ${token}`;
+
                 return {
                     url:`/api/top-sales?${params.toString()}`,
                     method:'GET',
-                    headers:{
-                        authorization:`Bearer ${token}`
-                    }
+                    headers: Object.keys(headers).length ? headers : undefined
                 };
             }
         }),
@@ -124,9 +270,20 @@ export const {
     useGetAllDataQuery,
     useLoginMutation,
     useRefreshTokenMutation,
+    useGetUserSettingsQuery,
+    useUpdateUserSettingsMutation,
+    useChangeUserPasswordMutation,
+    useDeleteUserAccountMutation,
     useGetAllProductsQuery,
+    useGetProductQuery,
+    useUpdateProductMutation,
+    useDeleteProductMutation,
+    useCreateProductMutation,
+    useSetProductStatusMutation,
+    useCreateSaleMutation,
     useGetTransactionsQuery,
     useGetTopSalesQuery,
+    useRegistrationMutation
 } = DataSlice;
 
 

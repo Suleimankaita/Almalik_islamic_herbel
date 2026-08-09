@@ -1,8 +1,14 @@
 import { useState, useMemo } from 'react';
+import Swal from 'sweetalert2';
+import 'sweetalert2/dist/sweetalert2.min.css';
+import { useSelector } from 'react-redux';
+import { GetToken } from '../Features/AppSlice';
+import { useGetAllProductsQuery, useCreateSaleMutation } from '../Features/api/DataSlice';
 import {
   Search, User, Plus, Minus, Trash2, CreditCard, Banknote,
   Smartphone, ShoppingCart, Box, X, ChevronRight
 } from 'lucide-react';
+import Logo from "../assets/Logo.png"
 
 // --- Types ---
 type Category = 'All Products' | 'Herbs' | 'Oils' | 'Honey' | 'Supplements' | 'Powders' | 'Teas';
@@ -44,18 +50,41 @@ const PAYMENT_METHODS = [
   { id: 'pos', label: 'POS', icon: Smartphone },
 ];
 
+// --- Store / receipt config — edit these to match the real business ---
+const STORE = {
+  name: 'Al Malik Islamic Medicine',
+  tagline: 'Halal & Sunnah-based Wellness Store',
+  address: 'Kaduna State Unguwar Dosa, Nigeria',
+  phone: '+234 8145048160',
+  email: 'ALmalik_Islamic_Medicine@gmail.com',
+  // Swap for a real hosted logo URL (PNG/SVG) when one is available.
+  logoUrl: Logo,
+};
+
 export default function POS() {
   const [cart, setCart] = useState<CartItem[]>([]);
   const [activeCategory, setActiveCategory] = useState<Category>('All Products');
   const [searchQuery, setSearchQuery] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
+  const token = useSelector(GetToken);
+
+  const { data, isLoading, isError, refetch } = useGetAllProductsQuery({ token });
+  const [createSaleApi, { isLoading: isCreating }] = useCreateSaleMutation();
 
   // --- Actions ---
   const handleAddToCart = (product: Product) => {
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id);
       if (existing) {
+        if (existing.quantity + 1 > product.stock) {
+          Swal.fire({ icon: 'warning', title: 'Stock limit', text: 'Cannot add more than available stock.' });
+          return prev;
+        }
         return prev.map(item => item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item);
+      }
+      if (product.stock <= 0) {
+        Swal.fire({ icon: 'info', title: 'Out of stock', text: 'This product is currently out of stock.' });
+        return prev;
       }
       return [...prev, { ...product, quantity: 1, discount: 0 }];
     });
@@ -75,26 +104,253 @@ export default function POS() {
     setCart(prev => prev.filter(item => item.id !== id));
   };
 
-  const clearCart = () => {
-    if (window.confirm("Are you sure you want to clear the cart?")) {
-      setCart([]);
-    }
+  const clearCart = async () => {
+    const res = await Swal.fire({ title: 'Clear cart?', text: 'Remove all items from the cart.', showCancelButton: true, confirmButtonText: 'Clear', icon: 'question' });
+    if (res.isConfirmed) setCart([]);
   };
 
   // --- Computed / Derived State ---
+  const productsList = useMemo(() => {
+    const raw = Array.isArray(data?.products) ? data.products : [];
+    return raw.map((p: any) => ({
+      id: p._id || String(p.id || ''),
+      name: p.ProductName || 'Product',
+      variant: p.Barcode ? String(p.Barcode) : '—',
+      price: Number(p.SalePrice ?? p.ActualPrice ?? 0),
+      stock: Number(p.Quantity ?? 0),
+      image: p.img ? `${import.meta.env.VITE_URI}/img/${p.img}` : 'https://placehold.co/150x150/f8fafc/333333?text=No+Img',
+      category: (p.Category || 'All Products') as Category,
+      badge: undefined,
+    })) as Product[];
+  }, [data]);
+
   const filteredProducts = useMemo(() => {
-    return PRODUCTS.filter(p => {
+    const source = productsList.length ? productsList : PRODUCTS;
+    return source.filter(p => {
       const matchesCategory = activeCategory === 'All Products' || p.category === activeCategory;
-      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-                            p.variant.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.variant.toLowerCase().includes(searchQuery.toLowerCase());
       return matchesCategory && matchesSearch;
     });
-  }, [activeCategory, searchQuery]);
+  }, [productsList, activeCategory, searchQuery]);
 
   const subTotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
   const tax = subTotal * 0.075; // 7.5% VAT
   const totalDiscount = cart.reduce((acc, item) => acc + item.discount, 0);
-  const total = subTotal + tax - totalDiscount;
+  const total = subTotal ;
+
+  const handlePay = async () => {
+    if (cart.length === 0) return;
+
+    const confirm = await Swal.fire({ title: 'Complete sale?', html: `Total: <strong>${formatCurrency(total)}</strong>`, showCancelButton: true, confirmButtonText: 'Pay', icon: 'question' });
+    if (!confirm.isConfirmed) return;
+
+    try {
+      Swal.fire({ title: 'Processing...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), showConfirmButton: false });
+
+      const saleCart = cart.map(i => ({ id: i.id, name: i.name, variant: i.variant, price: i.price, quantity: i.quantity }));
+      const body = { items: cart.map(i => ({ id: i.id, quantity: i.quantity, Quantity: i.quantity })) };
+      await createSaleApi(body).unwrap();
+      Swal.close();
+      const printed = await Swal.fire({ title: 'Sale recorded', text: 'Would you like to print a receipt?', icon: 'success', showCancelButton: true, confirmButtonText: 'Print', cancelButtonText: 'Done' });
+
+      if (printed.isConfirmed) {
+        printReceipt(saleCart);
+      }
+
+      setCart([]);
+      refetch();
+    } catch (err: any) {
+      Swal.close();
+      const msg = err?.data?.message || err?.message || 'Could not complete sale.';
+      Swal.fire({ icon: 'error', title: 'Sale failed', text: msg });
+    }
+  };
+
+  const generateReceiptNo = () => {
+    const now = new Date();
+    const stamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
+    const rand = Math.floor(1000 + Math.random() * 9000);
+    return `AM-${stamp}-${rand}`;
+  };
+
+  const escapeHtml = (value: string) =>
+    value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+
+  const printReceipt = (items: { id: string; name: string; variant: string; price: number; quantity: number }[]) => {
+    if (!items || !items.length) return;
+
+    const now = new Date();
+    const receiptNo = generateReceiptNo();
+    const activeMethod = PAYMENT_METHODS.find((m) => m.id === paymentMethod);
+
+    const dateStr = now.toISOString().split('T')[0];
+    const timeStr = now.toLocaleTimeString()
+
+    const subtotal = items.reduce((s, it) => s + it.price * it.quantity, 0);
+    const taxAmt = subtotal * 0.075;
+    const totalAmt = subtotal + taxAmt;
+    const totalUnits = items.reduce((s, it) => s + it.quantity, 0);
+
+    const lines = items.map(i => `
+      <tr>
+        <td class="cell item-cell">
+          <div class="item-name">${escapeHtml(i.name)}${i.variant ? ` <span class="muted">(${escapeHtml(i.variant)})</span>` : ''}</div>
+          <div class="item-id">ID: ${escapeHtml(i.id).slice(-10)}</div>
+        </td>
+        <td class="cell" style="text-align:center">${i.quantity}</td>
+        <td class="cell" style="text-align:right">${formatCurrency(i.price)}</td>
+        <td class="cell" style="text-align:right">${formatCurrency(i.price * i.quantity)}</td>
+      </tr>
+    `).join('');
+
+    const logoBlock = STORE.logoUrl
+      ? `<img src="${STORE.logoUrl}" alt="${escapeHtml(STORE.name)}" class="logo-img" />`
+      : `<div class="logo-mark">${escapeHtml(
+          STORE.name
+            .split(' ')
+            .map((w) => w[0])
+            .slice(0, 2)
+            .join('')
+            .toUpperCase()
+        )}</div>`;
+
+    const html = `
+      <html>
+        <head>
+          <title>Receipt · ${receiptNo}</title>
+          <meta name="viewport" content="width=device-width,initial-scale=1" />
+          <style>
+            @page { size: 80mm auto; margin: 0; }
+            * { box-sizing: border-box; }
+            body {
+              font-family: 'Courier New', Courier, monospace;
+              color: #111;
+              margin: 0;
+              padding: 10px;
+              background: #f4f4f5;
+              display: flex;
+              justify-content: center;
+            }
+            .receipt {
+              width: 320px;
+              background: #fff;
+              padding: 20px 18px 24px;
+              margin: 16px 0;
+            }
+            .store-header { text-align: center; margin-bottom: 10px; }
+            .logo-img { max-width: 64px; max-height: 64px; margin: 0 auto 8px; display: block; object-fit: contain; }
+            .logo-mark {
+              width: 52px; height: 52px; border-radius: 50%;
+              background: #15803d; color: #fff;
+              display: flex; align-items: center; justify-content: center;
+              margin: 0 auto 8px; font-weight: bold; font-size: 18px; letter-spacing: 0.5px;
+            }
+            .store-name { font-size: 16px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin: 0; }
+            .store-tagline { font-size: 10.5px; color: #555; margin: 2px 0 0; }
+            .store-meta { font-size: 10px; color: #666; margin-top: 6px; line-height: 1.5; }
+            .divider { border: none; border-top: 1px dashed #999; margin: 12px 0; }
+            .meta-row { display: flex; justify-content: space-between; font-size: 11px; margin: 3px 0; }
+            .meta-row span:first-child { color: #666; }
+            .meta-row span:last-child { font-weight: 600; }
+            table { width: 100%; border-collapse: collapse; margin-top: 4px; font-size: 11px; }
+            thead th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; color: #666; padding: 4px 2px; border-bottom: 1px dashed #999; }
+            .cell { padding: 7px 2px; border-bottom: 1px dashed #eee; vertical-align: top; }
+            .item-name { font-weight: 600; }
+            .item-id { font-size: 9px; color: #888; margin-top: 1px; }
+            .muted { color: #888; font-weight: 400; }
+            .totals { margin-top: 10px; font-size: 11.5px; }
+            .totals-row { display: flex; justify-content: space-between; padding: 3px 0; }
+            .totals-row.grand { border-top: 1px dashed #999; margin-top: 6px; padding-top: 8px; font-size: 15px; font-weight: 700; }
+            .badge { display: inline-block; font-size: 9.5px; border: 1px solid #15803d; color: #15803d; padding: 2px 8px; border-radius: 999px; margin-top: 8px; }
+            .footer { text-align: center; margin-top: 16px; }
+            .footer p { margin: 3px 0; }
+            .thanks { font-size: 12px; font-weight: 700; }
+            .subtext { font-size: 9.5px; color: #777; }
+            .barcode { margin: 10px auto 4px; letter-spacing: 3px; font-size: 13px; text-align: center; }
+            @media print {
+              body { background: #fff; }
+              .receipt { margin: 0; width: 100%; }
+            }
+          </style>
+        </head>
+        <body>
+          <div class="receipt">
+            <div class="store-header">
+              ${logoBlock}
+              <p class="store-name">${escapeHtml(STORE.name)}</p>
+              <p class="store-tagline">${escapeHtml(STORE.tagline)}</p>
+              <p class="store-meta">${escapeHtml(STORE.address)}<br/>${escapeHtml(STORE.phone)} · ${escapeHtml(STORE.email)}</p>
+            </div>
+
+            <hr class="divider" />
+
+            <div class="meta-row"><span>Receipt No.</span><span>${receiptNo}</span></div>
+            <div class="meta-row"><span>Date</span><span>${dateStr}</span></div>
+            <div class="meta-row"><span>Time</span><span>${timeStr}</span></div>
+            <div class="meta-row"><span>Payment</span><span>${activeMethod ? activeMethod.label : 'Cash'}</span></div>
+            <div class="meta-row"><span>Cashier</span><span>POS Terminal 1</span></div>
+
+            <hr class="divider" />
+
+            <table>
+              <thead>
+                <tr>
+                  <th>Item</th>
+                  <th style="text-align:center">Qty</th>
+                  <th style="text-align:right">Price</th>
+                  <th style="text-align:right">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${lines}
+              </tbody>
+            </table>
+
+            <div class="totals">
+              <div class="totals-row"><span>Items</span><span>${totalUnits}</span></div>
+              <div class="totals-row"><span>Subtotal</span><span>${formatCurrency(subtotal)}</span></div>
+            <!-- 
+    
+            <div class="totals-row"><span>VAT (7.5%)</span><span>${formatCurrency(taxAmt)}</span></div>
+            <div class="totals-row grand"><span>Total</span><span>${formatCurrency(totalAmt)}</span></div>
+            -->
+            </div>
+
+            <div class="footer">
+              <div class="barcode">*${receiptNo}*</div>
+              <p class="thanks">Thank you for shopping with us!</p>
+              <p class="subtext">Goods sold are non-refundable after 7 days.</p>
+              <span class="badge">Halal Certified · Sunnah Medicine</span>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const win = window.open('', '_blank', 'toolbar=0,location=0,menubar=0,width=400,height=700');
+    if (!win) {
+      Swal.fire({ icon: 'error', title: 'Print blocked', text: 'Please allow pop-ups to print receipts.' });
+      return;
+    }
+    win.document.open();
+    win.document.write(html);
+    win.document.close();
+    win.focus();
+
+    // Wait for content (and any logo image) to load before printing.
+    const triggerPrint = () => {
+      win.print();
+      setTimeout(() => win.close(), 300);
+    };
+    const logoEl = win.document.querySelector('.logo-img') as HTMLImageElement | null;
+    if (logoEl && !logoEl.complete) {
+      logoEl.onload = triggerPrint;
+      logoEl.onerror = triggerPrint;
+      setTimeout(triggerPrint, 1500); // fallback if the image never fires
+    } else {
+      setTimeout(triggerPrint, 250);
+    }
+  };
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(amount).replace('NGN', '₦');
@@ -277,10 +533,10 @@ export default function POS() {
               <span>Subtotal ({cart.reduce((a,b)=>a+b.quantity, 0)} items)</span>
               <span className="text-gray-800">{formatCurrency(subTotal)}</span>
             </div>
-            <div className="flex justify-between text-sm text-gray-500 font-medium">
+            {/* <div className="flex justify-between text-sm text-gray-500 font-medium">
               <span>Tax (7.5%)</span>
               <span className="text-gray-800">{formatCurrency(tax)}</span>
-            </div>
+            </div> */}
             {totalDiscount > 0 && (
               <div className="flex justify-between text-sm text-green-600 font-bold">
                 <span>Discount</span>
@@ -318,16 +574,26 @@ export default function POS() {
               })}
             </div>
 
+            {/* Print Receipt Button */}
+            <button
+              onClick={() => printReceipt(cart.map(i=>({ id:i.id, name:i.name, variant:i.variant, price:i.price, quantity:i.quantity })))}
+              disabled={cart.length === 0}
+              className={`w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-300 ${cart.length>0? 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+            >
+              Print Receipt
+            </button>
+
             {/* Complete Button */}
             <button 
-              disabled={cart.length === 0}
+              onClick={handlePay}
+              disabled={cart.length === 0 || isCreating}
               className={`w-full py-4 rounded-xl font-black text-lg flex items-center justify-center gap-2 transition-all duration-300 
                 ${cart.length > 0 
                   ? 'bg-green-700 hover:bg-green-800 text-white shadow-xl shadow-green-700/20 active:scale-[0.98]' 
                   : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                }`}
+                } ${isCreating ? 'opacity-60 cursor-not-allowed' : ''}`}
             >
-              Pay {formatCurrency(total)} <ChevronRight size={20} />
+              {isCreating ? 'Processing…' : `Pay ${formatCurrency(total)}`} <ChevronRight size={20} />
             </button>
           </div>
         </div>

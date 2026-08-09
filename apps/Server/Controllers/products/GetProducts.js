@@ -317,7 +317,7 @@ export const UpdateProduct = asyncHandler(async (req, res) => {
     const product = await Product.findById(id);
     if (!product) return notFound(res, "Product");
 
-    const { ProductName, ActualPrice, SalePrice, Quantity } = req.body;
+    const { ProductName, ActualPrice, SalePrice, Quantity,Category,Supplier } = req.body;
     const img=req.file?.filename;
     if (ProductName !== undefined && ProductName !== null && String(ProductName).trim() !== "") {
         product.ProductName = String(ProductName).trim();
@@ -361,7 +361,11 @@ export const UpdateProduct = asyncHandler(async (req, res) => {
         product.Quantity = nextQuantity;
     }
 
-    if(img){
+
+    product.Supplier = Supplier ?? product.Supplier;
+    product.Category = Category ?? product.Category;
+
+    if(img!==undefined && img!==null && img!==""){
         product.img = img;
     }
 
@@ -406,10 +410,36 @@ export const DeleteProduct = asyncHandler(async (req, res) => {
     });
 });
 
+export const SetProductStatus = asyncHandler(async (req, res) => {
+    const { id } = req.params;
+    const { Status } = req.body;
+
+    if (!requireValidObjectId(id, res)) return;
+    if (!Status || !['Active', 'Inactive'].includes(String(Status))) {
+        return res.status(400).json({
+            success: false,
+            message: "Status must be either 'Active' or 'Inactive'.",
+        });
+    }
+
+    const product = await Product.findById(id);
+    if (!product) return notFound(res, "Product");
+
+    product.Status = String(Status);
+    await product.save();
+
+    res.status(200).json({
+        success: true,
+        message: `Product marked as ${product.Status}.`,
+        product,
+    });
+});
+
 export default {
     GetProducts,
     GetProduct,
     GetTopSales,
     UpdateProduct,
     DeleteProduct,
+    SetProductStatus,
 };

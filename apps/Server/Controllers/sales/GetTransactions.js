@@ -29,11 +29,21 @@ const buildDateQuery = (startDate, endDate) => {
     return {};
 };
 
+const escapeRegExp = (value) =>
+    String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
 export const GetTransactions = asyncHandler(async (req, res) => {
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 20;
     const skip = (page - 1) * limit;
     const query = buildDateQuery(req.query.startDate, req.query.endDate);
+
+    const productName = String(req.query.productName || '').trim();
+    if (productName) {
+        query.ProductName = {
+            $regex: new RegExp(`^${escapeRegExp(productName)}`, 'i'),
+        };
+    }
 
     const [transactions, totalCount] = await Promise.all([
         Sales.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit),

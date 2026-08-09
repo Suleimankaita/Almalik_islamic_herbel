@@ -3,6 +3,7 @@ import { useDispatch } from "react-redux";
 import { Outlet, Navigate } from "react-router-dom";
 import { useRefreshTokenMutation } from "./api/DataSlice";
 import { setToken } from "./AppSlice";
+import Loader from "../components/Loader";
 
 const PersistLogin = (): React.JSX.Element => {
   const [refresh,{isError, isSuccess,isLoading}] = useRefreshTokenMutation();
@@ -47,7 +48,7 @@ const PersistLogin = (): React.JSX.Element => {
   }, [dispatch, refresh]);
 
   if (isLoading) {
-    return <div>Loading...</div>;
+    return <Loader message="Verifying refresh token..."  />;
     // return <Loader />;
   }
 

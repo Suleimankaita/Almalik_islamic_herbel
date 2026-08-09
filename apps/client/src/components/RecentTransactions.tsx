@@ -35,7 +35,7 @@ export default function RecentTransactions({ transactions = [], isLoading = fals
     : recentTransactions;
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm max-h-96  overflow-auto">
       <div className="mb-3 flex items-center justify-between">
         <h3 className="text-[15px] font-bold text-gray-900">Recent Transactions</h3>
         <button className="text-[12.5px] font-semibold text-brand-green hover:underline">View All</button>

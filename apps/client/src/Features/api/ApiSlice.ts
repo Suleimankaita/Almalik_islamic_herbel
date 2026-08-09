@@ -20,22 +20,19 @@ const baseQuery = fetchBaseQuery({
     prepareHeaders: (headers, { getState }) => {
 
         const state = getState() as {
-            auth?: {
+            Appslice?: {
                 Token?: string;
             }
         };
 
+        const token = state.Appslice?.Token;
 
-        const token = state.auth?.Token;
-
-
-        if(token){
+        if (token) {
             headers.set(
                 "authorization",
                 `Bearer ${token}`
             );
         }
-
 
         return headers;
     }
@@ -234,7 +231,8 @@ const baseQueryWithReauth = async (
         "Shareholders",
         "Integrations",
         "Nodes",
-        "Dashboard"
+        "Dashboard",
+        "Products"
     ],
 
 

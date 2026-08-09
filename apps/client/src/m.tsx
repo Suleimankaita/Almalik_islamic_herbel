@@ -7,7 +7,7 @@ import { Calendar as CalendarIcon, ChevronDown, X, RefreshCw } from 'lucide-reac
 // CSS styles required by react-date-range
 import 'react-date-range/dist/styles.css';
 import 'react-date-range/dist/theme/default.css';
-
+import Loader from './components/Loader';
 import { StatCard, MiniStatCard } from './components/StatCard';
 import SalesOverview from './components/SalesOverview';
 import StockStatus from './components/StockStatus';
@@ -396,6 +396,10 @@ export default function App() {
 
   return (
     <div className="flex bg-[#F6F7F9] min-h-screen">
+      {isLoading ? (
+          <Loader message="Loading dashboard data..." fullScreen={false}/>
+      ):(
+        
       <div className="flex min-w-0 flex-1 flex-col">
         <main className="flex-1 space-y-5 p-6">
           {/* Header & Date Controls */}
@@ -532,7 +536,7 @@ export default function App() {
           </div>
 
           {/* Main Content Grid */}
-          <div className="grid grid-cols-1 gap-5 xl:grid-cols-[1.1fr_1.1fr_0.8fr]">
+          <div className="grid grid-cols gap-5 xl:grid-cols-[1.1fr_1.1fr_0.8fr] min-h-96 ">
             <SalesOverview sales={salesSummary.points} isLoading={isLoading} isEmpty={hasNoResultsForRange} />
             <RecentTransactions transactions={sortedTransactions} isLoading={isLoading} />
             <StockStatus
@@ -555,6 +559,8 @@ export default function App() {
           <QuoteBanner />
         </main>
       </div>
+      )}
+
     </div>
   );
 }

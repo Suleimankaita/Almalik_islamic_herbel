@@ -9,6 +9,7 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export const CreateProduct = asyncHandler(async (req, res) => {
+    
     const {
         ProductName,
         ActualPrice,
@@ -21,6 +22,8 @@ export const CreateProduct = asyncHandler(async (req, res) => {
         ProductName,
         ActualPrice,
         SalePrice,
+        Quantity,
+
     });
 
     if (!checkInput.success) {
@@ -31,7 +34,7 @@ export const CreateProduct = asyncHandler(async (req, res) => {
     }
 
     const normalizedQuantity = Quantity === undefined || Quantity === null ? 0 : Number(Quantity);
-
+    
     if (!Number.isFinite(normalizedQuantity) || normalizedQuantity < 0) {
         return res.status(400).json({
             success: false,
@@ -56,6 +59,7 @@ export const CreateProduct = asyncHandler(async (req, res) => {
         SalePrice: Number(SalePrice),
         Quantity: normalizedQuantity,
         img,
+        Status: req.body.Status || 'Active',
     });
 
     res.status(201).json({
@@ -104,7 +108,12 @@ export const UpdateProduct = asyncHandler(async (req, res) => {
         ProductName,
         ActualPrice,
         SalePrice,
+        Quantity,
+        Suplier,
+        Category,
+        Status
     } = req.body;
+    console.log(req.body)
     
     const img=req.file?.filename
     const product = await Product.findById(id);
@@ -120,6 +129,9 @@ export const UpdateProduct = asyncHandler(async (req, res) => {
     product.ProductName = ProductName ?? product.ProductName;
     product.ActualPrice = ActualPrice ?? product.ActualPrice;
     product.SalePrice = SalePrice ?? product.SalePrice;
+    product.Quantity = Quantity ?? product.Quantity;
+    product.Supplier = Supplier ?? product.Supplier;
+    product.Category = Category ?? product.Category;
     product.img=img??product.img
     if(img&&product.img){
         await fsp.unlink(path.join(__dirname,"..","..","Public/Img",product?.img))

@@ -3,7 +3,7 @@ import { stockStatus } from '../data';
 
 export default function StockStatus() {
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm max-h-96">
       <h3 className="mb-4 text-[15px] font-bold text-gray-900">Stock Status</h3>
 
       <div className="flex items-center gap-4">

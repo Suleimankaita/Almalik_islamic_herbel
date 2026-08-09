@@ -14,6 +14,14 @@ import {
   X,
   Check,
 } from 'lucide-react';
+import {
+  useGetUserSettingsQuery,
+  useUpdateUserSettingsMutation,
+  useChangeUserPasswordMutation,
+  useDeleteUserAccountMutation,
+} from '../Features/api/DataSlice';
+import { useSelector } from 'react-redux';
+import { GetToken } from '../Features/AppSlice';
 
 // --- Types & Interfaces ---
 
@@ -197,19 +205,68 @@ export default function SettingsPage() {
     title: string;
     value: string;
     type: 'text' | 'password';
-    onSave: (val: string) => void;
-  }>({ isOpen: false, title: '', value: '', type: 'text', onSave: () => {} });
-  
+    onSave: (val: string) => Promise<void> | void;
+  }>({ isOpen: false, title: '', value: '', type: 'text', onSave: async () => {} });
+
+  const token=useSelector(GetToken)
+
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+
+  const { data: settingsData, isLoading: isLoadingSettings, isFetching: isFetchingSettings } = useGetUserSettingsQuery({token},{ 
+    pollingInterval:1000
+  });
+  const [updateSettings, { isLoading: isUpdatingSettings }] = useUpdateUserSettingsMutation();
+  const [changePassword, { isLoading: isChangingPassword }] = useChangeUserPasswordMutation();
+  const [deleteAccount, { isLoading: isDeletingAccount }] = useDeleteUserAccountMutation();
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
+  useEffect(() => {
+    if (settingsData?.success && settingsData.user) {
+      setEmail(settingsData.user.Email || '');
+      setNotifications(settingsData.user.Notifications ?? true);
+      setDarkMode(settingsData.user.Theme === 'dark');
+      setLanguage(settingsData.user.Language || 'English');
+      setUnits(settingsData.user.Units || 'Metric (kg, cm)');
+    }
+  }, [settingsData]);
+
   // Helper to show temporary toast notifications
   const showToast = (message: string) => {
     setToast({ message, id: Date.now() });
     setTimeout(() => setToast(null), 3000);
+  };
+
+  const saveSettings = async (payload: Record<string, any>, successMessage: string) => {
+    try {
+      await updateSettings(payload).unwrap();
+      showToast(successMessage);
+    } catch (err: any) {
+      showToast(err?.data?.message || err?.message || 'Update failed');
+      throw err;
+    }
+  };
+
+  const handlePasswordChange = async (newPassword: string) => {
+    try {
+      await changePassword({ newPassword }).unwrap();
+      showToast('Password updated securely');
+    } catch (err: any) {
+      showToast(err?.data?.message || err?.message || 'Password update failed');
+      throw err;
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    try {
+      await deleteAccount().unwrap();
+      showToast('Account deleted successfully');
+      window.location.href = '/';
+    } catch (err: any) {
+      showToast(err?.data?.message || err?.message || 'Unable to delete account');
+    }
   };
 
   // Toggle dropdowns safely
@@ -296,8 +353,18 @@ export default function SettingsPage() {
                   value={email}
                   delay={200}
                   onClick={() => setEditModal({
-                    isOpen: true, title: 'Update Email Address', type: 'text', value: email,
-                    onSave: (val) => { setEmail(val); showToast("Email successfully updated"); }
+                    isOpen: true,
+                    title: 'Update Email Address',
+                    type: 'text',
+                    value: email,
+                    onSave: async (val) => {
+                      if (!val) {
+                        showToast('Email is required');
+                        return;
+                      }
+                      setEmail(val);
+                      await saveSettings({ Email: val }, 'Email successfully updated');
+                    },
                   })}
                 />
                 <div className="mx-4 h-px bg-gray-100 dark:bg-gray-800 transition-colors" />
@@ -308,8 +375,17 @@ export default function SettingsPage() {
                   value="********"
                   delay={250}
                   onClick={() => setEditModal({
-                    isOpen: true, title: 'Update Password', type: 'password', value: '',
-                    onSave: (val) => { setPassword(val); showToast("Password updated securely"); }
+                    isOpen: true,
+                    title: 'Update Password',
+                    type: 'password',
+                    value: '',
+                    onSave: async (val) => {
+                      if (!val || val.length < 6) {
+                        showToast('Password must be at least 6 characters');
+                        return;
+                      }
+                      await handlePasswordChange(val);
+                    },
                   })}
                 />
               </div>
@@ -328,9 +404,14 @@ export default function SettingsPage() {
                   action={
                     <Toggle
                       active={notifications}
-                      onChange={() => {
-                        setNotifications(!notifications);
-                        showToast(notifications ? "Notifications disabled" : "Notifications enabled");
+                      onChange={async () => {
+                        const next = !notifications;
+                        setNotifications(next);
+                        try {
+                          await saveSettings({ Notifications: next }, next ? 'Notifications enabled' : 'Notifications disabled');
+                        } catch {
+                          setNotifications(!next);
+                        }
                       }}
                     />
                   }
@@ -376,7 +457,15 @@ export default function SettingsPage() {
                   action={
                     <Toggle
                       active={darkMode}
-                      onChange={() => setDarkMode(!darkMode)}
+                      onChange={async () => {
+                        const nextTheme = darkMode ? 'light' : 'dark';
+                        setDarkMode(!darkMode);
+                        try {
+                          await saveSettings({ Theme: nextTheme }, nextTheme === 'dark' ? 'Dark mode enabled' : 'Light mode enabled');
+                        } catch {
+                          setDarkMode(darkMode);
+                        }
+                      }}
                     />
                   }
                   delay={450}

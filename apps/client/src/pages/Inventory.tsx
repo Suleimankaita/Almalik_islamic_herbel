@@ -8,14 +8,16 @@ import type { productsDatas } from '../types';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { SetRoutes, GetToken } from '../Features/AppSlice';
-import { useGetAllProductsQuery } from '../Features/api/DataSlice';
+import { useGetAllProductsQuery, useDeleteProductMutation } from '../Features/api/DataSlice';
+import Swal from 'sweetalert2';
+import 'sweetalert2/dist/sweetalert2.min.css';
 
 interface BackendProduct {
   _id?: string;
   id?: string;
   ProductName?: string;
   SKU?: string | number;
-  Categpry?: string;
+  Category?: string;
   Supplier?: string;
   Quantity?: number;
   ActualPrice?: number;
@@ -44,14 +46,17 @@ export default function AlMalikInventory() {
     {  pollingInterval: 1000, refetchOnFocus: true }
   );
 
+  const [deleteProductApi, { isLoading: isDeleting }] = useDeleteProductMutation();
+
   const productsData = useMemo(() => {
     const rawProducts = Array.isArray(data?.products) ? data.products : [];
     return rawProducts.map((item: BackendProduct) => ({
-      id: Number(item._id || item.id || 0),
-      image: item.img ?item?.img : '🧾',
-      name: item.ProductName || 'Unnamed product',
-      sku: String(item.SKU || '—'),
-      category: item.Categpry || 'Uncategorized',
+      id: item._id || String(item.id || ''),
+      image: item.img ? item.img : '🧾',
+      Category: item.Category || '—',
+      barcode:item.Barcode,
+      name: item.ProductName || '—',
+      sku: item.SKU ? String(item.SKU) : '—',
       supplier: item.Supplier || '—',
       stock: Number(item.Quantity ?? 0),
       price: Number(item.SalePrice ?? item.ActualPrice ?? 0),
@@ -66,7 +71,7 @@ export default function AlMalikInventory() {
     return productsData.filter((res) => {
       const searchText = SearchResult.toLowerCase().trim();
       const matchesSearch = !searchText || res.name.toLowerCase().includes(searchText) || res.sku.toLowerCase().includes(searchText);
-      const matchesCategory = Cate === 'All Categories' || res.category === Cate;
+      const matchesCategory = Cate === 'All Categories' || res?.Category === Cate;
       return matchesSearch && matchesCategory;
     });
   }, [productsData, SearchResult, Cate]);
@@ -81,6 +86,54 @@ export default function AlMalikInventory() {
   useEffect(()=>{
     console.log(selectedProduct)
   },[selectedProduct])
+
+
+  const handleDeleteProduct = async () => {
+    if (!selectedProduct?.id) return;
+
+    const confirm = await Swal.fire({
+      title: `Delete ${selectedProduct.name}?`,
+      text: 'This action cannot be undone.',
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonText: 'Delete',
+      confirmButtonColor: '#dc2626',
+      cancelButtonText: 'Cancel',
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    // show loading modal
+    Swal.fire({
+      title: 'Deleting...',
+      allowOutsideClick: false,
+      didOpen: () => Swal.showLoading(),
+      showConfirmButton: false,
+    });
+
+    try {
+      await deleteProductApi({ token, id: selectedProduct.id }).unwrap();
+      Swal.close();
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: 'Product deleted',
+        showConfirmButton: false,
+        timer: 1500,
+      });
+      setSelectedProduct(null);
+      refetch();
+    } catch (error) {
+      console.error('Delete failed', error);
+      Swal.close();
+      Swal.fire({
+        icon: 'error',
+        title: 'Delete failed',
+        text: 'Could not delete product. Please try again.',
+      });
+    }
+  };
 
 
   
@@ -166,30 +219,30 @@ export default function AlMalikInventory() {
                       <td className="px-4 py-3.5">
                         <input type="checkbox" checked={selectedProduct?.id === prod.id} readOnly className="rounded text-blue-600 cursor-pointer" />
                       </td>
-                      <td className="px-4 py-3.5 font-medium text-gray-900">{prod.id}</td>
+                      <td className="px-4 py-3.5 font-medium text-gray-900">{prod?.id?.substr(0, 8) || '—'}</td>
                       <td className="px-4 py-3.5 flex items-center gap-3">
                         <div className="w-9 h-9 flex items-center justify-center bg-gray-100 rounded-lg border border-gray-200 text-lg">
                           <img className="w-full h-full object-cover" src={`${import.meta.env.VITE_URI}/img/${prod.image}`} alt="" />
                           {/* {prod.image} */}
                         </div>
-                        <span className="font-medium text-gray-900">{prod.name}</span>
+                        <span className="font-medium text-gray-900">{prod?.name}</span>
                       </td>
-                      <td className="px-4 py-3.5 text-gray-500">{prod.sku}</td>
-                      <td className="px-4 py-3.5 text-gray-500">{prod?.category}</td>
-                      <td className="px-4 py-3.5 text-gray-900 font-medium">{prod.stock}</td>
+                      <td className="px-4 py-3.5 text-gray-500">{prod?.sku}</td>
+                      <td className="px-4 py-3.5 text-gray-500">{prod?.Category}</td>
+                      <td className="px-4 py-3.5 text-gray-900 font-medium">{prod?.stock}</td>
                       <td className="px-4 py-3.5">
                         <span className={`px-3 py-1 rounded-full text-xs font-semibold tracking-wide ${
                           prod.status === 'Available' ? 'bg-green-100 text-green-700 border border-green-200' : 
                           prod.status === 'Low Stock' ? 'bg-amber-100 text-amber-700 border border-amber-200' : 
                           'bg-red-100 text-red-700 border border-red-200'
                         }`}>
-                          {prod.status}
+                          {prod?.status}
                         </span>
                       </td>
                     </tr>
                   ))}
                   
-                  }
+                  
                 </tbody>
               </table>
               ) : (
@@ -213,7 +266,7 @@ export default function AlMalikInventory() {
             {/* Header / Main Info */}
             <div className="flex gap-6 mb-8">
               <div className="w-32 h-40 bg-gray-50 rounded-xl flex items-center justify-center border border-gray-200 text-6xl shadow-inner">
-                <img className="w-full h-full" src={`${import.meta.env.VITE_URI}/img/${selectedProduct?.image}`} alt="" />
+                <img className="w-full h-full " src={`${import.meta.env.VITE_URI}/img/${selectedProduct?.image}`} alt={selectedProduct?.name} />
                 {/* {selectedProduct?.image || '📦'} */}
               </div>
               <div className="flex-1 space-y-3">
@@ -234,7 +287,7 @@ export default function AlMalikInventory() {
                   <div className="font-medium text-gray-900">{selectedProduct?.sku || '—'}</div>
                   <div className="text-gray-500">Barcode</div>
                   <div className="font-medium text-gray-900 flex items-center gap-2">
-                    662123456789 <Barcode className="w-4 h-4 text-gray-400"/>
+                    {selectedProduct?.barcode} <Barcode className="w-4 h-4 text-gray-400"/>
                   </div>
                 </div>
               </div>
@@ -243,7 +296,7 @@ export default function AlMalikInventory() {
             {/* General Info Grid */}
             <div className="grid grid-cols-2 gap-y-4 gap-x-4 text-sm mb-6 pb-6 border-b border-gray-100">
               <div className="text-gray-500">Category</div>
-              <div className="font-medium text-gray-900">{selectedProduct?.category || '—'}</div>
+              <div className="font-medium text-gray-900">{selectedProduct?.Category || '—'}</div>
               
               <div className="text-gray-500">Supplier</div>
               <div className="font-medium text-gray-900">{selectedProduct?.supplier || '—'}</div>
@@ -309,7 +362,7 @@ export default function AlMalikInventory() {
                 const ms=action.label==="View Product"?"view":action.label.startsWith("Edit")?"edit":action.label==="Transfer Stock"?"transfer":"history"
                 dispatch(SetRoutes(ms))
 
-                navigate(`/Inventory/ViewProucts/${selectedProduct?.id || 0}`)}} key={i} className="flex items-center gap-3 w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 hover:shadow-sm transition-all text-sm font-medium text-gray-700">
+                navigate(`/Inventory/view-products/${selectedProduct?.id || 0}`)}} key={i} className="flex items-center gap-3 w-full px-4 py-2.5 bg-white border border-gray-200 rounded-lg hover:bg-gray-50 hover:border-gray-300 hover:shadow-sm transition-all text-sm font-medium text-gray-700">
                 <action.icon className="w-4 h-4 text-blue-600/70" />
                 {action.label}
               </button>
@@ -317,9 +370,13 @@ export default function AlMalikInventory() {
             
             <hr className="my-2 border-gray-100" />
             
-            <button className="flex items-center gap-3 w-full px-4 py-2.5 bg-red-50 border border-red-100 rounded-lg hover:bg-red-100 transition-colors text-sm font-medium text-red-700">
+            <button
+              onClick={handleDeleteProduct}
+              disabled={!selectedProduct || isDeleting}
+              className={`flex items-center gap-3 w-full px-4 py-2.5 bg-red-50 border border-red-100 rounded-lg transition-colors text-sm font-medium text-red-700 ${(!selectedProduct || isDeleting) ? 'opacity-60 cursor-not-allowed' : 'hover:bg-red-100'}`}
+            >
               <Trash2 className="w-4 h-4" />
-              Delete Product
+              {isDeleting ? 'Deleting…' : 'Delete Product'}
             </button>
             <button className="flex items-center gap-3 w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors text-sm font-medium text-gray-600">
               <Archive className="w-4 h-4" />

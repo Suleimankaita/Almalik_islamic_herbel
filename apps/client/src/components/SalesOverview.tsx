@@ -1,6 +1,7 @@
 import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from 'recharts';
 import { ChevronDown } from 'lucide-react';
 import type { SalesPoint } from '../types';
+import Loader from "../components/Loader"
 
 function formatNaira(value: number) {
   return `₦${(value / 1000).toFixed(0)}K`;
@@ -29,15 +30,13 @@ export default function SalesOverview({ sales = [], isLoading = false, isEmpty =
   if (isLoading) {
     return (
       <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-        <div className="mb-4 h-5 w-32 rounded bg-gray-100" />
-        <div className="mb-3 h-8 w-24 rounded bg-gray-100" />
-        <div className="h-55 w-full animate-pulse rounded-xl bg-gray-50" />
+      <Loader/>
       </div>
     );
   }
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
+    <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm max-h-96">
       <div className="mb-4 flex items-center justify-between">
         <h3 className="text-[15px] font-bold text-gray-900">Sales Overview</h3>
         <button className="flex items-center gap-1 rounded-lg border border-gray-200 px-2.5 py-1.5 text-[12px] font-medium text-gray-600">

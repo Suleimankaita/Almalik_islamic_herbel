@@ -6,7 +6,7 @@ const ProductSchema=new mongoose.Schema({
         type:String,
         default:''
     },
-    Categpry:String,
+    Category:String,
     Supplier:String,
     Barcode:{
         type:Number,
@@ -35,6 +35,11 @@ const ProductSchema=new mongoose.Schema({
     SalePrice:{
         type:Number,
         default:0
+    },
+    Status:{
+        type:String,
+        enum:['Active','Inactive','active'],
+        default:'Active'
     }, 
     Date:{
         type:String,
