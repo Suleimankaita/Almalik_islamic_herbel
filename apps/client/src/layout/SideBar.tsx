@@ -93,7 +93,7 @@ export default function Sidebar() {
                 end={item.path === '/'}
                   className={({ isActive }) => ` flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13.5px] font-medium transition-colors ${
                     isActive
-                      ? 'bg-brand-green text-white shadow-sm'
+                      ? 'bg-brand-green text-green-600 shadow-sm'
                       : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
                   }`}
                 >
