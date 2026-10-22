@@ -1,34 +1,31 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useDispatch } from "react-redux";
-import { Outlet, Navigate } from "react-router-dom";
+import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useRefreshTokenMutation } from "./api/DataSlice";
 import { setToken } from "./AppSlice";
 import Loader from "../components/Loader";
 
 const PersistLogin = (): React.JSX.Element => {
-  const [refresh,{isError, isSuccess,isLoading}] = useRefreshTokenMutation();
+  const [refresh] = useRefreshTokenMutation();
   const dispatch = useDispatch();
   const [loading, setLoading] = useState(true);
-  const [success, setSuccess] = useState(false);
-
-  const effectRan = useRef(false);
+  const [authenticated, setAuthenticated] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     let isMounted = true;
 
     const verifyRefreshToken = async () => {
       try {
-        const response = await refresh();
-
-        // if (isMounted) {
-          dispatch(setToken(response.data));
-          setSuccess(true);
-        // }
-      } catch (err) {
-        console.error("Refresh token failed:", err);
-
+        const accessToken = await refresh(undefined).unwrap();
         if (isMounted) {
-          setSuccess(false);
+          dispatch(setToken(accessToken));
+          setAuthenticated(true);
+        }
+      } catch {
+        if (isMounted) {
+          dispatch(setToken(null));
+          setAuthenticated(false);
         }
       } finally {
         if (isMounted) {
@@ -37,27 +34,20 @@ const PersistLogin = (): React.JSX.Element => {
       }
     };
 
-    if (!effectRan.current) {
-      verifyRefreshToken();
-      effectRan.current = true;
-    }
+    void verifyRefreshToken();
 
     return () => {
       isMounted = false;
     };
   }, [dispatch, refresh]);
 
-  if (isLoading) {
-    return <Loader message="Verifying refresh token..."  />;
-    // return <Loader />;
+  if (loading) return <Loader message="Verifying your session..." />;
+
+  if (!authenticated) {
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  // if (!isSuccess) {
-  //   return <Navigate to="/login" replace />;
-  // }
-  // const { } = useAuth();
-
-  return (<Outlet />);
+  return <Outlet />;
 };
 
 export default PersistLogin;

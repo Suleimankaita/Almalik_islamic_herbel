@@ -93,8 +93,21 @@ const DataSlice = ApiSlice.injectEndpoints({
                 method: 'PUT',
                 body,
             }),
+            invalidatesTags: [
+                { type: 'USER' as const, id: 'CURRENT' },
+                { type: 'Products' as const, id: 'LIST' },
+            ],
+        }),
+        
+        UpadateProfileImg: builder.mutation({
+            query: (body: any) => ({
+                url: 'api/profile',
+                method: 'PUT',
+                body,
+            }),
             invalidatesTags: [{ type: 'USER' as const, id: 'CURRENT' }],
         }),
+
         ChangeUserPassword: builder.mutation({
             query: ({ newPassword }: { newPassword: string }) => ({
                 url: 'api/profile/password',
@@ -106,6 +119,15 @@ const DataSlice = ApiSlice.injectEndpoints({
             query: () => ({
                 url: 'api/profile',
                 method: 'DELETE',
+            }),
+        }),
+        DeleteProfileImg: builder.mutation({
+            query: (token) => ({
+                url: 'api/profile/img',
+                method: 'DELETE',
+                headers: {
+                    authorization: `Bearer ${token}`
+                }
             }),
         }),
         GetAllProducts:builder.query({
@@ -133,6 +155,22 @@ const DataSlice = ApiSlice.injectEndpoints({
                         { type: "Products" as const, id: "LIST" }
                     ]
                     : [{ type: "Products" as const, id: "LIST" }]
+        }),
+        GetLowStockProducts: builder.query({
+            query: () => ({
+                url: '/api/Product/low-stock',
+                method: 'GET',
+            }),
+            providesTags: (result): any =>
+                result?.products
+                    ? [
+                        ...result.products.map((product: any) => ({
+                            type: "Products" as const,
+                            id: product._id || product.id,
+                        })),
+                        { type: "Products" as const, id: "LIST" },
+                    ]
+                    : [{ type: "Products" as const, id: "LIST" }],
         }),
         GetProduct: builder.query({
             query:({token,id}:{token?: string; id:string})=>{
@@ -288,6 +326,7 @@ export const {
     useChangeUserPasswordMutation,
     useDeleteUserAccountMutation,
     useGetAllProductsQuery,
+    useGetLowStockProductsQuery,
     useGetProductQuery,
     useUpdateProductMutation,
     useDeleteProductMutation,
@@ -297,6 +336,8 @@ export const {
     useGetTransactionsQuery,
     useGetTopSalesQuery,
     useGetAllUserQuery,
+    useDeleteProfileImgMutation,
+    useUpadateProfileImgMutation,
     useRegistrationMutation
 } = DataSlice;
 

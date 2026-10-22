@@ -12,32 +12,36 @@ const Registration=asynchanler(async(req,res)=>{
     if(!CheckInput.success)return res.status(400).json({message:CheckInput.message});
 
     const Userfound=await User.findOne({Username}).exec()
-    const Chck=await User.find().exec()
+    const existingUser = await User.exists({});
     if(Userfound)return res.status(409).json({message:`this user is Already exist ${Username}`})
-    
-    if(Chck.length){
 
-        const Userprofile=await UserProfile.create({
-            Password,
-            Role
-        }) 
-        
-        await User.create({
-            Username,FirstName,LastName,
-            UserProfile:Userprofile._id
-        })
-    }else{
-        
-        const Userprofile=await UserProfile.create({
-            Password,
-            Role:"Admin"
-        }) 
-        
-        await User.create({
-            Username,FirstName,LastName,
-            UserProfile:Userprofile._id
-        })
+    if (existingUser && (!req.id || req.Roles !== "Admin")) {
+        return res.status(403).json({
+            success: false,
+            message: "Only an administrator can create user accounts.",
+        });
     }
+
+    const assignedRole = existingUser ? Role : "Admin";
+    if (!["Admin", "Manager", "Staff"].includes(assignedRole)) {
+        return res.status(400).json({
+            success: false,
+            message: "Role must be Admin, Manager, or Staff.",
+        });
+    }
+
+    const userProfile = await UserProfile.create({
+        Password,
+        Role: assignedRole,
+    });
+
+    await User.create({
+        Username,
+        FirstName,
+        LastName,
+        UserProfile: userProfile._id,
+    });
+
     res.status(200).json({message:`User created ${Username}`})
 })
 

@@ -3,9 +3,15 @@ import asynchandler from "express-async-handler"
 
 const RefreshToken=asynchandler(async(req,res)=>{
     const token =req.cookies?.jwt
-    if(!token)res.status(403).json({message:'No token To Verify'})
+    if(!token)return res.status(401).json({message:'Refresh token missing'})
 
-        const decode=jwt.verify(token,process.env.REFRESH_TOKEN_SECRET);
+        let decode;
+        try {
+            decode=jwt.verify(token,process.env.REFRESH_TOKEN_SECRET || "dev-refresh-token");
+        } catch {
+            res.clearCookie("jwt");
+            return res.status(403).json({message:'Invalid refresh token'})
+        }
         const {id,Role,Username}=decode?.UserInfo
         
         console.log(decode)
@@ -16,7 +22,7 @@ const RefreshToken=asynchandler(async(req,res)=>{
                 Username
             }
         },
-        process.env.ACCESS_TOKEN_SECRET
+        process.env.ACCESS_TOKEN_SECRET || "dev-access-token"
     ,{
         expiresIn:'10m'
     })
@@ -27,7 +33,7 @@ const RefreshToken=asynchandler(async(req,res)=>{
                 Username
             }
         },
-        process.env.REFRESH_TOKEN_SECRET
+        process.env.REFRESH_TOKEN_SECRET || "dev-refresh-token"
     ,{
         expiresIn:'7d'
     })

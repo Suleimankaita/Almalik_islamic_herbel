@@ -13,6 +13,11 @@ const UserProfileSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    LowStockThreshold: {
+      type: Number,
+      min: 0,
+      default: 5,
+    },
     Theme: {
       type: String,
       enum: ["light", "dark"],

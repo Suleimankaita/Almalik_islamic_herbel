@@ -159,9 +159,9 @@ export default function ProductManagementView(): React.JSX.Element {
 
   const stockStatus: 'Low In Stock' | 'Out of Stock' | 'Active' = useMemo(() => {
     if (!product.Quantity) return 'Out of Stock';
-    if (product.Quantity < 5) return 'Low In Stock';
+    if (product.Quantity <= Number(data?.threshold ?? 5)) return 'Low In Stock';
     return 'Active';
-  }, [product.Quantity]);
+  }, [product.Quantity, data?.threshold]);
 
   const transactions: Transaction[] = txData?.transactions ?? [];
 

@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useRef, useState, useMemo } from 'react';
 import Swal from 'sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
 import { useSelector } from 'react-redux';
@@ -6,13 +6,11 @@ import { GetToken } from '../Features/AppSlice';
 import { useGetAllProductsQuery, useCreateSaleMutation } from '../Features/api/DataSlice';
 import {
   Search, User, Plus, Minus, Trash2, CreditCard, Banknote,
-  Smartphone, ShoppingCart, Box, X, ChevronRight
+  Smartphone, ShoppingCart, Box, X, ChevronRight, RefreshCw
 } from 'lucide-react';
 import Logo from "../assets/Logo.png"
 
 // --- Types ---
-type Category = 'All Products' | 'Herbs' | 'Oils' | 'Honey' | 'Supplements' | 'Powders' | 'Teas';
-
 type Product = {
   id: string;
   name: string;
@@ -20,30 +18,28 @@ type Product = {
   price: number;
   stock: number;
   image: string;
-  category: Category;
+  category: string;
   badge?: { text: string; color: string; bgColor: string };
 };
+
+interface ApiProduct {
+  _id?: string;
+  id?: string;
+  ProductName?: string;
+  Barcode?: string | number;
+  SKU?: string | number;
+  SalePrice?: number;
+  ActualPrice?: number;
+  Quantity?: number;
+  img?: string;
+  Category?: string;
+}
 
 type CartItem = Product & {
   quantity: number;
   discount: number;
 };
 
-// --- Mock Data ---
-const PRODUCTS: Product[] = [
-  { id: '1', name: 'Black Seed Oil', variant: '500ml', price: 4000, stock: 120, category: 'Oils', image: 'https://placehold.co/150x150/f8fafc/333333?text=Oil', badge: { text: 'Organic', color: 'text-green-700', bgColor: 'bg-green-50' } },
-  { id: '2', name: 'Honey', variant: '500g', price: 3500, stock: 85, category: 'Honey', image: 'https://placehold.co/150x150/f8fafc/333333?text=Honey' },
-  { id: '3', name: 'Olive Oil', variant: '250ml', price: 3000, stock: 65, category: 'Oils', image: 'https://placehold.co/150x150/f8fafc/333333?text=Olive', badge: { text: 'Sunnah', color: 'text-green-700', bgColor: 'bg-green-50' } },
-  { id: '4', name: 'Nigella Sativa Powder', variant: '100g', price: 2000, stock: 45, category: 'Powders', image: 'https://placehold.co/150x150/f8fafc/333333?text=Powder' },
-  { id: '5', name: 'Zamzam Water', variant: '1L', price: 1200, stock: 200, category: 'Supplements', image: 'https://placehold.co/150x150/f8fafc/333333?text=Water' },
-  { id: '6', name: 'Ajwa Dates', variant: '500g', price: 2500, stock: 60, category: 'Supplements', image: 'https://placehold.co/150x150/f8fafc/333333?text=Dates' },
-  { id: '7', name: 'Sidr Honey', variant: '500g', price: 4500, stock: 30, category: 'Honey', image: 'https://placehold.co/150x150/f8fafc/333333?text=Sidr' },
-  { id: '8', name: 'Herbal Tea', variant: '100g', price: 1800, stock: 75, category: 'Teas', image: 'https://placehold.co/150x150/f8fafc/333333?text=Tea' },
-  { id: '9', name: 'Habbatus Sauda Capsule', variant: '60', price: 2200, stock: 40, category: 'Supplements', image: 'https://placehold.co/150x150/f8fafc/333333?text=Capsule' },
-  { id: '10', name: 'Olive Leaf Extract', variant: '60ml', price: 2800, stock: 50, category: 'Herbs', image: 'https://placehold.co/150x150/f8fafc/333333?text=Extract' },
-];
-
-const CATEGORIES: Category[] = ['All Products', 'Herbs', 'Oils', 'Honey', 'Supplements', 'Powders', 'Teas'];
 const PAYMENT_METHODS = [
   { id: 'cash', label: 'Cash', icon: Banknote },
   { id: 'card', label: 'Card', icon: CreditCard },
@@ -62,8 +58,9 @@ const STORE = {
 };
 
 export default function POS() {
+  const receiptCounter = useRef(0);
   const [cart, setCart] = useState<CartItem[]>([]);
-  const [activeCategory, setActiveCategory] = useState<Category>('All Products');
+  const [activeCategory, setActiveCategory] = useState('All Products');
   const [searchQuery, setSearchQuery] = useState('');
   const [paymentMethod, setPaymentMethod] = useState('cash');
   const token = useSelector(GetToken);
@@ -94,6 +91,10 @@ export default function POS() {
     setCart(prev => prev.map(item => {
       if (item.id === id) {
         const newQty = Math.max(1, item.quantity + delta);
+        if (newQty > item.stock) {
+          Swal.fire({ icon: 'warning', title: 'Stock limit', text: `Only ${item.stock} unit(s) are available.` });
+          return item;
+        }
         return { ...item, quantity: newQty };
       }
       return item;
@@ -111,32 +112,36 @@ export default function POS() {
 
   // --- Computed / Derived State ---
   const productsList = useMemo(() => {
-    const raw = Array.isArray(data?.products) ? data.products : [];
-    return raw.map((p: any) => ({
+    const raw: ApiProduct[] = Array.isArray(data?.products) ? data.products : [];
+    return raw.map((p): Product => ({
       id: p._id || String(p.id || ''),
       name: p.ProductName || 'Product',
-      variant: p.Barcode ? String(p.Barcode) : '—',
+      variant: p.SKU ? String(p.SKU) : p.Barcode ? String(p.Barcode) : '—',
       price: Number(p.SalePrice ?? p.ActualPrice ?? 0),
       stock: Number(p.Quantity ?? 0),
       image: p.img ? `${import.meta.env.VITE_URI}/img/${p.img}` : 'https://placehold.co/150x150/f8fafc/333333?text=No+Img',
-      category: (p.Category || 'All Products') as Category,
+      category: p.Category?.trim() || 'Uncategorized',
       badge: undefined,
-    })) as Product[];
+    }));
   }, [data]);
 
+  const categories = useMemo(
+    () => ['All Products', ...new Set(productsList.map((product) => product.category))],
+    [productsList],
+  );
+
   const filteredProducts = useMemo(() => {
-    const source = productsList.length ? productsList : PRODUCTS;
-    return source.filter(p => {
+    return productsList.filter(p => {
       const matchesCategory = activeCategory === 'All Products' || p.category === activeCategory;
-      const matchesSearch = p.name.toLowerCase().includes(searchQuery.toLowerCase()) || p.variant.toLowerCase().includes(searchQuery.toLowerCase());
+      const query = searchQuery.trim().toLowerCase();
+      const matchesSearch = p.name.toLowerCase().includes(query) || p.variant.toLowerCase().includes(query);
       return matchesCategory && matchesSearch;
     });
   }, [productsList, activeCategory, searchQuery]);
 
   const subTotal = cart.reduce((acc, item) => acc + (item.price * item.quantity), 0);
-  const tax = subTotal * 0.075; // 7.5% VAT
   const totalDiscount = cart.reduce((acc, item) => acc + item.discount, 0);
-  const total = subTotal ;
+  const total = subTotal - totalDiscount;
 
   const handlePay = async () => {
     if (cart.length === 0) return;
@@ -159,9 +164,10 @@ export default function POS() {
 
       setCart([]);
       refetch();
-    } catch (err: any) {
+    } catch (err: unknown) {
       Swal.close();
-      const msg = err?.data?.message || err?.message || 'Could not complete sale.';
+      const error = err as { data?: { message?: string }; message?: string };
+      const msg = error.data?.message || error.message || 'Could not complete sale.';
       Swal.fire({ icon: 'error', title: 'Sale failed', text: msg });
     }
   };
@@ -169,8 +175,8 @@ export default function POS() {
   const generateReceiptNo = () => {
     const now = new Date();
     const stamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
-    const rand = Math.floor(1000 + Math.random() * 9000);
-    return `AM-${stamp}-${rand}`;
+    receiptCounter.current += 1;
+    return `AM-${stamp}-${String(receiptCounter.current).padStart(4, '0')}`;
   };
 
   const escapeHtml = (value: string) =>
@@ -357,10 +363,10 @@ export default function POS() {
   };
 
   return (
-    <div className=" flex flex-col lg:flex-row h-screen bg-gray-100 text-gray-800 font-sans selection:bg-green-100 overflow-hidden">
+    <div className="flex min-h-full flex-col bg-gray-100 font-sans text-gray-800 selection:bg-green-100 lg:h-full lg:flex-row lg:overflow-hidden">
       
       {/* ================= LEFT PANEL (Products & Search) ================= */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden bg-gray-50/50">
+      <div className="flex min-h-[65vh] flex-1 flex-col bg-gray-50/50 lg:h-full lg:min-h-0 lg:overflow-hidden">
         
         {/* Top Action Bar */}
         <div className="flex-none p-4 lg:p-6 pb-2 lg:pb-4 border-b border-gray-200 bg-white shadow-sm z-10">
@@ -368,10 +374,11 @@ export default function POS() {
             
             {/* Categories Navigation */}
             <div className="flex items-center gap-2 overflow-x-auto w-full xl:w-auto scrollbar-hide pb-2 xl:pb-0">
-              {CATEGORIES.map((cat) => (
+              {categories.map((cat) => (
                 <button 
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
+                  aria-pressed={activeCategory === cat}
                   className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold whitespace-nowrap transition-all duration-200 active:scale-95 ${
                     activeCategory === cat 
                       ? 'bg-green-700 text-white shadow-md shadow-green-700/20' 
@@ -385,7 +392,7 @@ export default function POS() {
             </div>
 
             {/* Search Bar */}
-            <div className="relative w-full xl:w-80 flex-shrink-0 group">
+            <div className="group relative w-full shrink-0 xl:w-80">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-green-600 transition-colors" size={18} />
               <input 
                 type="text" 
@@ -402,14 +409,36 @@ export default function POS() {
         </div>
 
         {/* Product Grid Area */}
-        <div className="flex-1 overflow-y-auto p-4 lg:p-6 custom-scrollbar">
+        <div className="min-h-[45vh] flex-1 overflow-y-auto p-4 lg:min-h-0 lg:p-6 custom-scrollbar">
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 xl:grid-cols-5 gap-4 lg:gap-5 pb-20 lg:pb-0">
-            {filteredProducts.length > 0 ? (
+            {isLoading ? (
+              <div role="status" className="col-span-full flex min-h-64 flex-col items-center justify-center gap-3 text-sm font-semibold text-gray-500">
+                <RefreshCw size={22} className="animate-spin text-green-700" />
+                Loading products...
+              </div>
+            ) : isError ? (
+              <div role="alert" className="col-span-full flex min-h-64 flex-col items-center justify-center gap-3 text-center">
+                <p className="font-bold text-gray-800">Products could not be loaded</p>
+                <p className="text-sm text-gray-500">Check your connection and try again.</p>
+                <button type="button" onClick={() => void refetch()} className="inline-flex items-center gap-2 rounded-lg bg-green-700 px-4 py-2 text-sm font-semibold text-white hover:bg-green-800">
+                  <RefreshCw size={15} /> Try again
+                </button>
+              </div>
+            ) : filteredProducts.length > 0 ? (
               filteredProducts.map(product => (
                 <div 
                   key={product.id} 
-                  onClick={() => handleAddToCart(product)}
-                  className="bg-white rounded-2xl border border-gray-200 p-3 hover:shadow-xl hover:shadow-gray-200/50 hover:border-green-300 transition-all duration-300 relative flex flex-col cursor-pointer group active:scale-[0.98]"
+                  onClick={() => product.stock > 0 && handleAddToCart(product)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' || event.key === ' ') {
+                      event.preventDefault();
+                      if (product.stock > 0) handleAddToCart(product);
+                    }
+                  }}
+                  role="button"
+                  tabIndex={product.stock > 0 ? 0 : -1}
+                  aria-disabled={product.stock <= 0}
+                  className={`relative group flex flex-col rounded-2xl border bg-white p-3 transition-all duration-300 ${product.stock > 0 ? 'cursor-pointer border-gray-200 hover:border-green-300 hover:shadow-xl hover:shadow-gray-200/50 active:scale-[0.98]' : 'cursor-not-allowed border-gray-100 opacity-60'}`}
                 >
                   {/* Badge */}
                   {product.badge && (
@@ -424,12 +453,15 @@ export default function POS() {
                   {/* Details */}
                   <div className="flex-1 flex flex-col justify-end px-1">
                     <h3 className="text-sm font-bold text-gray-800 leading-tight mb-1 line-clamp-2">{product.name}</h3>
-                    <p className="text-xs text-gray-400 font-medium mb-3">{product.variant}</p>
+                    <p className="mb-2 text-xs font-medium text-gray-400">{product.variant}</p>
+                    <p className={`mb-3 text-[11px] font-semibold ${product.stock > 0 ? 'text-gray-500' : 'text-red-600'}`}>
+                      {product.stock > 0 ? `${product.stock} in stock` : 'Out of stock'}
+                    </p>
                     <div className="flex items-center justify-between mt-auto">
                       <p className="text-base font-black text-green-700">{formatCurrency(product.price)}</p>
-                      <button className="w-8 h-8 bg-gray-100 group-hover:bg-green-700 text-gray-500 group-hover:text-white rounded-lg flex items-center justify-center transition-colors shadow-sm">
+                      <span aria-hidden="true" className="w-8 h-8 bg-gray-100 group-hover:bg-green-700 text-gray-500 group-hover:text-white rounded-lg flex items-center justify-center transition-colors shadow-sm">
                         <Plus size={18} />
-                      </button>
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -446,7 +478,7 @@ export default function POS() {
       </div>
 
       {/* ================= RIGHT PANEL (Always Visible Cart & Checkout) ================= */}
-      <aside className="w-full lg:w-[320px] bg-white border-t lg:border-t-0 lg:border-l border-gray-200 flex flex-col shadow-2xl lg:shadow-none z-20 flex-none h-[85vh] lg:h-full rounded-t-3xl lg:rounded-none fixed lg:relative bottom-0 transition-transform duration-300">
+      <aside className="z-20 flex h-[70vh] w-full flex-none flex-col rounded-t-3xl border-t border-gray-200 bg-white shadow-2xl transition-transform duration-300 lg:relative lg:h-full lg:w-85 lg:rounded-none lg:border-l lg:border-t-0 lg:shadow-none">
         
         {/* Header / Customer */}
         <div className="flex-none p-5 border-b border-gray-100 bg-white">
@@ -488,7 +520,7 @@ export default function POS() {
               {cart.map((item) => (
                 <div key={item.id} className="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex gap-3 group relative overflow-hidden">
                   {/* Item Image */}
-                  <div className="w-16 h-16 bg-gray-50 rounded-lg flex-shrink-0 border border-gray-100 p-1 flex items-center justify-center">
+                  <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-lg border border-gray-100 bg-gray-50 p-1">
                     <img src={item.image} alt={item.name} className="w-full h-full object-contain mix-blend-multiply" />
                   </div>
                   
@@ -504,17 +536,19 @@ export default function POS() {
 
                     <div className="flex justify-between items-end mt-2">
                       <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-lg p-0.5">
-                        <button onClick={() => updateQuantity(item.id, -1)} className="w-7 h-7 flex items-center justify-center text-gray-500 hover:bg-white hover:text-red-500 hover:shadow-sm rounded transition-all active:scale-95"><Minus size={14} /></button>
+                        <button type="button" aria-label={`Remove one ${item.name}`} onClick={() => updateQuantity(item.id, -1)} className="w-7 h-7 flex items-center justify-center text-gray-500 hover:bg-white hover:text-red-500 hover:shadow-sm rounded transition-all active:scale-95"><Minus size={14} /></button>
                         <span className="w-6 text-center text-sm font-bold text-gray-800">{item.quantity}</span>
-                        <button onClick={() => updateQuantity(item.id, 1)} className="w-7 h-7 flex items-center justify-center text-gray-500 hover:bg-white hover:text-green-600 hover:shadow-sm rounded transition-all active:scale-95"><Plus size={14} /></button>
+                        <button type="button" aria-label={`Add one ${item.name}`} onClick={() => updateQuantity(item.id, 1)} disabled={item.quantity >= item.stock} className="w-7 h-7 flex items-center justify-center text-gray-500 hover:bg-white hover:text-green-600 hover:shadow-sm rounded transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"><Plus size={14} /></button>
                       </div>
                     </div>
                   </div>
 
                   {/* Remove Button (Appears on hover) */}
                   <button 
+                    type="button"
                     onClick={() => removeFromCart(item.id)}
-                    className="absolute right-2 top-2 p-1.5 text-gray-300 hover:text-red-500 hover:bg-red-50 rounded-lg opacity-0 group-hover:opacity-100 transition-all"
+                    aria-label={`Remove ${item.name} from order`}
+                    className="absolute right-2 top-2 rounded-lg p-1.5 text-gray-300 opacity-100 transition-all hover:bg-red-50 hover:text-red-500 md:opacity-0 md:group-hover:opacity-100"
                   >
                     <Trash2 size={16} />
                   </button>

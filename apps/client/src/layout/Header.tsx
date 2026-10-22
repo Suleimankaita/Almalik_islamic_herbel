@@ -1,16 +1,55 @@
-import { Menu, Search, Plus, ShoppingBag, PackagePlus, Bell, Mail, Moon, ChevronDown } from 'lucide-react';
+import { Menu, Search, Plus, ShoppingBag, PackagePlus, Bell, Mail, ChevronDown } from 'lucide-react';
 import { useDispatch, useSelector } from 'react-redux';
-import { GetToggle, SetToggle } from '../Features/AppSlice';
-import img from "../assets/man.png"
+import { GetToggle, GetToken, SetToggle } from '../Features/AppSlice';
 import { GetUserDetails } from '../Features/AppSlice';
+import { useGetLowStockProductsQuery, useGetUserSettingsQuery } from '../Features/api/DataSlice';
+import { Link, useLocation } from 'react-router-dom';
+
 
 interface UserInfo{
   Username:string,
   Role:string
 }
 
+const normalizePathname = (pathname: string): string => {
+  try {
+    return decodeURIComponent(pathname).toLowerCase();
+  } catch {
+    return pathname.toLowerCase();
+  }
+};
+
 export default function Header(): React.JSX.Element {
+  const location = useLocation();
+  const currentPath = normalizePathname(location.pathname);
+  const currentPage = currentPath === '/'
+    ? 'Dashboard'
+    : currentPath.startsWith('/inventory/view-products/')
+      ? 'Inventory'
+      : ({
+          '/sales-pos': 'Sales (POS)',
+          '/sales (pos)': 'Sales (POS)',
+          '/inventory': 'Inventory',
+          '/add product': 'Add Product',
+          '/customers': 'Customers',
+          '/suppliers': 'Suppliers',
+          '/expenses': 'Expenses',
+          '/reports': 'Reports',
+          '/notifications': 'Notifications',
+          '/users-and-roles': 'Users & Roles',
+          '/settings': 'Settings',
+          '/purchase': 'Purchase Orders',
+          '/messages': 'Messages',
+        } as Record<string, string>)[currentPath] || '';
   const Open = useSelector(GetToggle);
+  const token=useSelector(GetToken)
+  const { data: settingsData } = useGetUserSettingsQuery(token, {
+    pollingInterval: 1000,
+  });
+  const { data: lowStockData } = useGetLowStockProductsQuery(
+    undefined,
+    { skip: !token, pollingInterval: 30000, refetchOnFocus: true },
+  );
   const {Username,Role}:UserInfo=useSelector(GetUserDetails)
   const dispatch = useDispatch();
 
@@ -44,49 +83,50 @@ export default function Header(): React.JSX.Element {
           Ctrl + K
         </kbd>
       </div>
+      {currentPage && (
+        <div aria-current="page" className="hidden rounded-lg bg-green-50 px-3 py-2 text-xs font-bold text-green-800 md:block">
+          {currentPage}
+        </div>
+      )}
 
       <div className="ml-auto flex flex-wrap items-center justify-end gap-2 sm:gap-2.5">
-        <button className="flex items-center gap-1.5 rounded-lg border border-brand-green px-2.5 py-2 text-[12px] font-semibold text-brand-green hover:bg-brand-greenLight sm:px-3 sm:text-[13px]">
+        <Link to="/sales-pos" className="flex items-center gap-1.5 rounded-lg border border-brand-green px-2.5 py-2 text-[12px] font-semibold text-brand-green hover:bg-brand-greenLight sm:px-3 sm:text-[13px]">
           <Plus size={15} />
           <span className="hidden sm:inline">New Sale</span>
-        </button>
-        <button className="flex items-center gap-1.5 rounded-lg border border-blue-500 px-2.5 py-2 text-[12px] font-semibold text-blue-600 hover:bg-blue-50 sm:px-3 sm:text-[13px]">
+        </Link>
+        <Link to="/purchase" className="flex items-center gap-1.5 rounded-lg border border-blue-500 px-2.5 py-2 text-[12px] font-semibold text-blue-600 hover:bg-blue-50 sm:px-3 sm:text-[13px]">
           <ShoppingBag size={15} />
           <span className="hidden sm:inline">Purchase</span>
-        </button>
-        <button className="flex items-center gap-1.5 rounded-lg border border-amber-500 px-2.5 py-2 text-[12px] font-semibold text-amber-600 hover:bg-amber-50 sm:px-3 sm:text-[13px]">
+        </Link>
+        <Link to="/add product" className="flex items-center gap-1.5 rounded-lg border border-amber-500 px-2.5 py-2 text-[12px] font-semibold text-amber-600 hover:bg-amber-50 sm:px-3 sm:text-[13px]">
           <PackagePlus size={15} />
           <span className="hidden sm:inline">Product</span>
-        </button>
+        </Link>
 
         <div className="hidden h-6 w-px bg-gray-200 sm:block" />
 
-        <button className="relative rounded-full p-2 text-gray-500 hover:bg-gray-50">
+        <Link to="/notifications" aria-label="Open notifications" className="relative rounded-full p-2 text-gray-500 hover:bg-gray-50">
           <Bell size={18} />
-          <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
-            8
-          </span>
-        </button>
-        <button className="relative rounded-full p-2 text-gray-500 hover:bg-gray-50">
+          {Number(lowStockData?.count ?? 0) > 0 && (
+            <span className="absolute -top-0.5 -right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-500 px-1 text-[9px] font-bold text-white">
+              {Number(lowStockData.count) > 99 ? '99+' : lowStockData.count}
+            </span>
+          )}
+        </Link>
+        <Link to="/messages" aria-label="Open messages" className="relative rounded-full p-2 text-gray-500 hover:bg-gray-50">
           <Mail size={18} />
-          <span className="absolute -top-0.5 -right-0.5 flex h-4 w-4 items-center justify-center rounded-full bg-blue-500 text-[9px] font-bold text-white">
-            3
-          </span>
-        </button>
-        <button className="rounded-full p-2 text-gray-500 hover:bg-gray-50">
-          <Moon size={18} />
-        </button>
+        </Link>
 
         <div className="hidden h-6 w-px bg-gray-200 xl:block" />
 
-        <button className="hidden items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-[13px] font-medium text-gray-700 hover:bg-gray-50 lg:flex">
+        <span className="hidden items-center gap-1.5 rounded-lg border border-gray-200 px-3 py-2 text-[13px] font-medium text-gray-700 lg:flex">
           Main Branch
           <ChevronDown size={14} className="text-gray-400" />
-        </button>
+        </span>
 
-        <button className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-gray-50">
+        <Link to="/settings" className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-gray-50">
           <img
-            src={img}
+            src={import.meta.env.VITE_URI + "/img/" + (settingsData?.user?.Img || "man.png")}
             alt={Username||"Username"}
             className="h-9 w-9 rounded-full object-cover"
           />
@@ -95,7 +135,7 @@ export default function Header(): React.JSX.Element {
             <p className="text-[11px] leading-tight text-gray-400">{Role}</p>
           </div>
           <ChevronDown size={14} className="hidden text-gray-400 xl:block" />
-        </button>
+        </Link>
       </div>
     </header>
   );

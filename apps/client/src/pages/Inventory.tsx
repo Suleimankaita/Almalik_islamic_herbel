@@ -7,7 +7,7 @@ import {
 import type { productsDatas } from '../types';
 import { useNavigate } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
-import { SetRoutes, GetToken } from '../Features/AppSlice';
+import { SetRoutes, GetToken, GetUserDetails } from '../Features/AppSlice';
 import { useGetAllProductsQuery, useDeleteProductMutation } from '../Features/api/DataSlice';
 import Swal from 'sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
@@ -35,6 +35,7 @@ interface BackendProduct {
 export default function AlMalikInventory() {
   const dispatch = useDispatch();
   const token = useSelector(GetToken);
+  const role = (useSelector(GetUserDetails) as { Role?: string } | null)?.Role;
   const navigate = useNavigate();
 
   const [SearchResult, SetSearch] = useState<string>('');
@@ -50,6 +51,7 @@ export default function AlMalikInventory() {
 
   const productsData = useMemo(() => {
     const rawProducts = Array.isArray(data?.products) ? data.products : [];
+    const lowStockThreshold = Number(data?.threshold ?? 5);
     return rawProducts.map((item: BackendProduct) => ({
       id: item._id || String(item.id || ''),
       image: item.img ? item.img : '🧾',
@@ -60,7 +62,7 @@ export default function AlMalikInventory() {
       supplier: item.Supplier || '—',
       stock: Number(item.Quantity ?? 0),
       price: Number(item.SalePrice ?? item.ActualPrice ?? 0),
-      status: Number(item.Quantity ?? 0) > 5 ? 'Available' : Number(item.Quantity ?? 0) > 0 ? 'Low Stock' : 'Out of Stock',
+      status: Number(item.Quantity ?? 0) > lowStockThreshold ? 'Available' : Number(item.Quantity ?? 0) > 0 ? 'Low Stock' : 'Out of Stock',
       batch: item.Barcode ? String(item.Barcode) : '—',
       expiry: item.ExpiryDate || '—',
       desc: `${item.ProductName || 'Product'} is currently ${Number(item.Quantity ?? 0) > 0 ? 'in stock' : 'out of stock'}.`,
@@ -370,14 +372,16 @@ export default function AlMalikInventory() {
             
             <hr className="my-2 border-gray-100" />
             
-            <button
-              onClick={handleDeleteProduct}
-              disabled={!selectedProduct || isDeleting}
-              className={`flex items-center gap-3 w-full px-4 py-2.5 bg-red-50 border border-red-100 rounded-lg transition-colors text-sm font-medium text-red-700 ${(!selectedProduct || isDeleting) ? 'opacity-60 cursor-not-allowed' : 'hover:bg-red-100'}`}
-            >
-              <Trash2 className="w-4 h-4" />
-              {isDeleting ? 'Deleting…' : 'Delete Product'}
-            </button>
+            {role === 'Admin' && (
+              <button
+                onClick={handleDeleteProduct}
+                disabled={!selectedProduct || isDeleting}
+                className={`flex items-center gap-3 w-full px-4 py-2.5 bg-red-50 border border-red-100 rounded-lg transition-colors text-sm font-medium text-red-700 ${(!selectedProduct || isDeleting) ? 'opacity-60 cursor-not-allowed' : 'hover:bg-red-100'}`}
+              >
+                <Trash2 className="w-4 h-4" />
+                {isDeleting ? 'Deleting…' : 'Delete Product'}
+              </button>
+            )}
             <button className="flex items-center gap-3 w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-lg hover:bg-gray-100 transition-colors text-sm font-medium text-gray-600">
               <Archive className="w-4 h-4" />
               Archive

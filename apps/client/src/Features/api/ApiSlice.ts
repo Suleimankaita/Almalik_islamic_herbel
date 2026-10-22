@@ -130,10 +130,18 @@ const baseQueryWithReauth = async (
                         );
 
 
-                        if(window.location.pathname !== "/"){
-                            window.location.href="/";
+                        if(window.location.pathname !== "/login"){
+                            window.location.href="/login";
                         }
 
+                    }
+
+                    if (errorData.status === 401 || errorData.status === 403) {
+                        api.dispatch(setToken(null));
+                        api.dispatch(SetUserDetails(null));
+                        if (window.location.pathname !== "/login") {
+                            window.location.href = "/login";
+                        }
                     }
 
                 }
@@ -201,7 +209,7 @@ const baseQueryWithReauth = async (
             );
 
 
-            window.location.href="/";
+            window.location.href="/login";
 
         }
 

@@ -5,8 +5,10 @@ const Verify = asynchandler(async (req, res, next) => {
   const auth = req.headers["authorization"] || req.headers["Authorization"];
 
   if (!auth || typeof auth !== "string" || !auth.startsWith("Bearer ")) {
-    req.id = null;
-    return next();
+    return res.status(401).json({
+      success: false,
+      message: "Authentication required.",
+    });
   }
 
   try {

@@ -1,5 +1,6 @@
 import asyncHandler from "express-async-handler";
 import Product from "../../models/Product.js";
+import { getStockThreshold } from "./GetProducts.js";
 import Checkfields from "../../../../packages/utils/FieldCheck.ts";
 import fsp from "fs/promises"
 // Create Product
@@ -61,12 +62,13 @@ export const CreateProduct = asyncHandler(async (req, res) => {
         img,
         Status: req.body.Status || 'Active',
     });
+    const threshold = await getStockThreshold(req.id);
 
     res.status(201).json({
         success: true,
         message: "Product created successfully.",
         product,
-        lowStock: normalizedQuantity <= 5,
+        lowStock: normalizedQuantity <= threshold,
     });
 });
 

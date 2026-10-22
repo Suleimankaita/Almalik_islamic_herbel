@@ -5,14 +5,19 @@ interface intialstates{
     Toggle:boolean,
     Routes:string,
     Token:string,
-    UserDetails:{},
+    UserDetails:DecodedToken | null,
 }
-
 
 interface DecodedToken {
     Role: string;
     Username: string;
     id: string;
+    UserInfo?: {
+        Role: string;
+        Username: string;
+        id: string;
+    };
+    exp?: number;
 }
 
 
@@ -20,7 +25,7 @@ const initialState:intialstates={
     Toggle:true,
     Routes:'',
     Token:'',
-    UserDetails:{}
+    UserDetails:null
 
 }
 
@@ -35,24 +40,33 @@ const initialState:intialstates={
              state.Routes=action.payload
         },
         setToken:(state,action)=>{
-            console.log('Setting token in AppSlice:', action.payload);
-             state.Token=action.payload
-            const token =action.payload
-             if(token && typeof token === 'string' && token !== 'null'){
-                try {
-                    const result=jwtDecode(token)
-                    if(result){
-                        const {Role,id,Username}:DecodedToken =result?.UserInfo
-                        state.UserDetails={Role,id,Username}
-                    }
-                } catch (err) {
-                    console.error('Invalid token:', err);
-                    state.Token=''
-                }
-            }
+             const token = action.payload;
+             if (typeof token !== 'string' || !token || token === 'null') {
+                 state.Token = '';
+                 state.UserDetails = null;
+                 return;
+             }
 
+             try {
+                 const decoded = jwtDecode<DecodedToken>(token);
+                 const user = decoded.UserInfo ?? decoded;
+                 if (!user.Role || !user.id) {
+                     state.Token = '';
+                     state.UserDetails = null;
+                     return;
+                 }
 
-        },
+                 state.Token = token;
+                 state.UserDetails = {
+                     Role: user.Role,
+                     id: user.id,
+                     Username: user.Username,
+                 };
+             } catch {
+                 state.Token = '';
+                 state.UserDetails = null;
+             }
+         },
         SetUserDetails:(state,action)=>{
              state.UserDetails=action.payload
 

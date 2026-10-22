@@ -6,10 +6,14 @@ import { useLoginMutation } from '../Features/api/DataSlice';
 import { useDispatch } from 'react-redux';
 import { setToken } from '../Features/AppSlice';
 import {toast, ToastContainer} from "react-toastify"
-import {useNavigate} from 'react-router-dom';
+import {Navigate, useLocation, useNavigate} from 'react-router-dom';
+import { useSelector } from 'react-redux';
+import { GetToken } from '../Features/AppSlice';
 export default function AlmalikAuthScreen() {
     const [Login,{isLoading,isSuccess}]=useLoginMutation();
     const navigate=useNavigate()
+    const location = useLocation();
+    const token = useSelector(GetToken);
     const [Username,SetUsername]=useState<string>('')
     
     const [Password,SetPassword]=useState<string>('')
@@ -18,11 +22,18 @@ export default function AlmalikAuthScreen() {
 
     const dispatch=useDispatch()
 
+    const destination = (location.state as { from?: { pathname?: string } } | null)?.from?.pathname || '/';
+
     useEffect(()=>{
       if(isSuccess){
-        navigate('/')
+        navigate(destination, { replace: true })
       }
-    },[isSuccess,navigate])
+    },[isSuccess,navigate,destination])
+
+    if (token) {
+      return <Navigate to={destination || '/'} replace />;
+    }
+
     const HandleSubmit=async()=>{
                 try{
                 const ms=await Login({Username,Password}).unwrap()

@@ -20,7 +20,6 @@ import {
     Phone,
     Building2,
     Clock3,
-    Settings2,
     User,
     AlertCircle,
     Leaf,
@@ -37,14 +36,15 @@ import {
 import { toast, ToastContainer } from "react-toastify";
 import { useSelector } from "react-redux";
 import { GetToken } from "../Features/AppSlice";
+import ComingSoon from "../components/ComingSoon";
 
 /*
 |--------------------------------------------------------------------------
-| Static Roles
+| Server Roles
 |--------------------------------------------------------------------------
 |
-| These are currently UI roles.
-| You can later load them from your backend if you have a Roles API.
+| These roles match the server-side UserProfile role enum.
+| Role assignment and access checks are enforced by the server.
 |--------------------------------------------------------------------------
 */
 
@@ -89,58 +89,14 @@ const initialRoles = [
 
     {
         id: 3,
-        name: "Cashier",
-        description: "Handle sales and customer transactions.",
+        name: "Staff",
+        description: "Handle sales and personal account settings.",
         color: "purple",
         permissions: {
             dashboard: ["view"],
-            inventory: ["view"],
             sales: ["view", "create"],
-            purchases: [],
-            customers: ["view", "create"],
-            suppliers: [],
-            expenses: [],
-            reports: [],
-            users: [],
-            settings: [],
-        },
-    },
-
-    {
-        id: 4,
-        name: "Inventory Manager",
-        description: "Manage products, stock and purchases.",
-        color: "orange",
-        permissions: {
-            dashboard: ["view"],
-            inventory: ["view", "create", "edit", "delete"],
-            sales: ["view"],
-            purchases: ["view", "create", "edit"],
-            customers: ["view"],
-            suppliers: ["view", "create", "edit"],
-            expenses: [],
-            reports: ["view"],
-            users: [],
-            settings: [],
-        },
-    },
-
-    {
-        id: 5,
-        name: "Sales Staff",
-        description: "Handle sales and customer management.",
-        color: "gold",
-        permissions: {
-            dashboard: ["view"],
-            inventory: ["view"],
-            sales: ["view", "create"],
-            purchases: [],
-            customers: ["view", "create", "edit"],
-            suppliers: [],
-            expenses: [],
-            reports: [],
-            users: [],
-            settings: [],
+            notifications: ["view"],
+            settings: ["view", "edit"],
         },
     },
 ];
@@ -150,19 +106,6 @@ const initialRoles = [
 | Permission Configuration
 |--------------------------------------------------------------------------
 */
-
-const modules = [
-    "dashboard",
-    "inventory",
-    "sales",
-    "purchases",
-    "customers",
-    "suppliers",
-    "expenses",
-    "reports",
-    "users",
-    "settings",
-];
 
 const permissionLabels = {
     dashboard: "Dashboard",
@@ -176,14 +119,6 @@ const permissionLabels = {
     users: "Users & Roles",
     settings: "Settings",
 };
-
-const permissionTypes = [
-    "view",
-    "create",
-    "edit",
-    "delete",
-    "export",
-];
 
 /*
 |--------------------------------------------------------------------------
@@ -516,9 +451,8 @@ export default function UsersRoles() {
         setOpenMenu(null);
     };
 
-    const editUser = (user) => {
-        setEditingUser(user);
-        setShowUserModal(true);
+    const editUser = () => {
+        toast.info("Editing user details will be available soon in production mode.");
         setOpenMenu(null);
     };
 
@@ -568,45 +502,15 @@ export default function UsersRoles() {
      */
 
     const editRole = (role) => {
-        setEditingRole(role);
-        setShowRoleModal(true);
+        toast.info(`Editing the ${role.name} role will be available soon in production mode.`);
     };
 
-    const deleteRole = (id) => {
-        const role = roles.find(
-            (item) => item.id === id
-        );
-
-        if (!role) return;
-
-        const usersUsingRole = roleUserCount(
-            role.name
-        );
-
-        if (usersUsingRole > 0) {
-            toast.warning(
-                `Cannot delete ${role.name}. ${usersUsingRole} user(s) currently use this role.`
-            );
-
-            return;
-        }
-
-        const confirmed = window.confirm(
-            `Delete "${role.name}" role?`
-        );
-
-        if (!confirmed) return;
-
-        setRoles((current) =>
-            current.filter(
-                (item) => item.id !== id
-            )
-        );
+    const deleteRole = () => {
+        toast.info("System roles cannot be removed.");
     };
 
     const addRole = () => {
-        setEditingRole(null);
-        setShowRoleModal(true);
+        toast.info("Custom role creation will be available soon in production mode.");
     };
 
     const saveRole = (roleData) => {
@@ -690,11 +594,7 @@ export default function UsersRoles() {
                 </div>
 
                 <button
-                    onClick={
-                        activeTab === "users"
-                            ? addUser
-                            : addRole
-                    }
+                    onClick={activeTab === "users" ? addUser : addRole}
                     className="
                         group
                         inline-flex
@@ -721,9 +621,7 @@ export default function UsersRoles() {
                         className="transition-transform duration-300 group-hover:rotate-90"
                     />
 
-                    {activeTab === "users"
-                        ? "Add User"
-                        : "Create Role"}
+                    {activeTab === "users" ? "Add User" : "Role permissions soon"}
                 </button>
             </div>
 
@@ -1058,11 +956,8 @@ export default function UsersRoles() {
                             </div>
 
                             <button
-                                onClick={() =>
-                                    setShowPermissions(
-                                        !showPermissions
-                                    )
-                                }
+                                type="button"
+                                onClick={() => setShowPermissions((visible) => !visible)}
                                 className="
                                     inline-flex
                                     items-center
@@ -1076,54 +971,38 @@ export default function UsersRoles() {
                                     text-[11px]
                                     font-semibold
                                     text-[#49634c]
-                                    transition
-                                    hover:bg-[#f5f9f3]
-                                "
-                            >
-                                <Settings2 size={14} />
-
-                                {showPermissions
-                                    ? "Role Cards"
-                                    : "Permission Matrix"}
+                                    transition hover:bg-[#f5f9f3]
+                                ">
+                                <ShieldCheck size={14} />
+                                {showPermissions ? "System roles" : "Custom permissions"}
                             </button>
                         </div>
 
-                        {!showPermissions ? (
-                            <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                                {roles.map((role) => (
-                                    <RoleCard
-                                        key={role.id}
-                                        role={{
-                                            ...role,
-                                            users:
-                                                roleUserCount(
-                                                    role.name
-                                                ),
-                                        }}
-                                        onEdit={
-                                            editRole
-                                        }
-                                        onDelete={
-                                            deleteRole
-                                        }
-                                        onPermissions={() => {
-                                            setEditingRole(
-                                                role
-                                            );
-
-                                            setShowPermissions(
-                                                true
-                                            );
-                                        }}
-                                    />
-                                ))}
-                            </div>
-                        ) : (
-                            <PermissionMatrix
-                                roles={roles}
-                                setRoles={setRoles}
-                            />
-                        )}
+                        <div className="rounded-2xl border border-[#e4eae0] bg-[#fcfdfb] p-5">
+                            <p className="text-sm font-semibold text-[#26392a]">
+                                Role assignments are enforced by the server.
+                            </p>
+                            <p className="mt-2 text-xs leading-6 text-gray-500">
+                                Admin has full access, Manager can manage daily operations, and Staff can use sales and personal settings. Custom role permissions will be available soon in production mode.
+                            </p>
+                            {showPermissions ? (
+                                <div className="mt-5">
+                                    <PermissionMatrix />
+                                </div>
+                            ) : (
+                                <div className="mt-5 grid grid-cols-1 gap-4 lg:grid-cols-2">
+                                    {roles.map((role) => (
+                                        <RoleCard
+                                            key={role.id}
+                                            role={{ ...role, users: roleUserCount(role.name) }}
+                                            onEdit={() => editRole(role)}
+                                            onDelete={() => deleteRole()}
+                                            onPermissions={() => setShowPermissions(true)}
+                                        />
+                                    ))}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
             </div>
@@ -1868,193 +1747,8 @@ function RoleCard({
 |--------------------------------------------------------------------------
 */
 
-function PermissionMatrix({
-    roles,
-    setRoles,
-}) {
-    const togglePermission = (
-        roleId,
-        module,
-        permission
-    ) => {
-        setRoles((current) =>
-            current.map((role) => {
-                if (role.id !== roleId) {
-                    return role;
-                }
-
-                const currentPermissions =
-                    role.permissions[module] || [];
-
-                const exists =
-                    currentPermissions.includes(
-                        permission
-                    );
-
-                return {
-                    ...role,
-
-                    permissions: {
-                        ...role.permissions,
-
-                        [module]: exists
-                            ? currentPermissions.filter(
-                                  (item) =>
-                                      item !==
-                                      permission
-                              )
-                            : [
-                                  ...currentPermissions,
-                                  permission,
-                              ],
-                    },
-                };
-            })
-        );
-    };
-
-    return (
-        <div>
-            <div className="mb-5">
-                <h3 className="text-sm font-semibold text-[#26392a]">
-                    Permission Matrix
-                </h3>
-
-                <p className="mt-1 text-[10px] text-gray-400">
-                    Configure module-level permissions
-                    for each role.
-                </p>
-            </div>
-
-            <div className="overflow-x-auto rounded-2xl border border-[#e4eae0]">
-                <table className="w-full min-w-[900px]">
-                    <thead>
-                        <tr className="bg-[#fafcf9]">
-                            <th className="border-b border-[#e8eee5] px-4 py-4 text-left text-[9px] font-bold uppercase tracking-wider text-gray-400">
-                                Module
-                            </th>
-
-                            {roles.map((role) => (
-                                <th
-                                    key={role.id}
-                                    className="border-b border-[#e8eee5] px-4 py-4 text-center"
-                                >
-                                    <div className="text-[9px] font-bold text-[#3e5843]">
-                                        {role.name}
-                                    </div>
-                                </th>
-                            ))}
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        {modules.map((module) => (
-                            <tr
-                                key={module}
-                                className="border-b border-[#edf1ea] last:border-0"
-                            >
-                                <td className="px-4 py-4">
-                                    <div className="flex items-center gap-2">
-                                        <div className="h-1.5 w-1.5 rounded-full bg-[#7fa37b]" />
-
-                                        <span className="text-[10px] font-semibold text-[#405743]">
-                                            {
-                                                permissionLabels[
-                                                    module
-                                                ]
-                                            }
-                                        </span>
-                                    </div>
-                                </td>
-
-                                {roles.map((role) => (
-                                    <td
-                                        key={role.id}
-                                        className="px-4 py-4"
-                                    >
-                                        <div className="flex flex-wrap justify-center gap-1">
-                                            {permissionTypes.map(
-                                                (
-                                                    permission
-                                                ) => {
-                                                    const active =
-                                                        role
-                                                            .permissions[
-                                                            module
-                                                        ]?.includes(
-                                                            permission
-                                                        );
-
-                                                    return (
-                                                        <button
-                                                            key={
-                                                                permission
-                                                            }
-                                                            onClick={() =>
-                                                                togglePermission(
-                                                                    role.id,
-                                                                    module,
-                                                                    permission
-                                                                )
-                                                            }
-                                                            title={
-                                                                permission
-                                                            }
-                                                            className={`
-                                                                flex
-                                                                h-6
-                                                                min-w-6
-                                                                items-center
-                                                                justify-center
-                                                                rounded-md
-                                                                px-1.5
-                                                                text-[7px]
-                                                                font-bold
-                                                                uppercase
-                                                                transition
-                                                                ${
-                                                                    active
-                                                                        ? "bg-[#e4f0e1] text-[#2d6937]"
-                                                                        : "bg-[#f5f6f4] text-gray-300 hover:bg-[#edf1ea]"
-                                                                }
-                                                            `}
-                                                        >
-                                                            {permission.charAt(
-                                                                0
-                                                            )}
-                                                        </button>
-                                                    );
-                                                }
-                                            )}
-                                        </div>
-                                    </td>
-                                ))}
-                            </tr>
-                        ))}
-                    </tbody>
-                </table>
-            </div>
-
-            <div className="mt-4 flex flex-wrap gap-4 text-[9px] text-gray-400">
-                {permissionTypes.map(
-                    (permission) => (
-                        <div
-                            key={permission}
-                            className="flex items-center gap-1.5"
-                        >
-                            <span className="flex h-5 min-w-5 items-center justify-center rounded bg-[#e4f0e1] px-1 text-[7px] font-bold uppercase text-[#2d6937]">
-                                {permission.charAt(
-                                    0
-                                )}
-                            </span>
-
-                            {permission}
-                        </div>
-                    )
-                )}
-            </div>
-        </div>
-    );
+function PermissionMatrix() {
+    return <ComingSoon title="Custom role permissions" />;
 }
 
 /*
@@ -2897,4 +2591,3 @@ if (
 
     document.head.appendChild(style);
 }
-

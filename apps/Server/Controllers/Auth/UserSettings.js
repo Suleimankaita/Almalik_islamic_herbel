@@ -2,6 +2,7 @@ import asyncHandler from "express-async-handler";
 import User from "../../models/User.js";
 import UserProfile from "../../models/UserProfile.js";
 import Checkfields from "../../../../packages/utils/FieldCheck.ts";
+import fsp from "fs/promises";
 
 const ALLOWED_THEMES = ["light", "dark"];
 const ALLOWED_LANGUAGES = ["English", "French", "Arabic", "Spanish"];
@@ -30,9 +31,11 @@ export const GetUserSettings = asyncHandler(async (req, res) => {
       Role: profile.Role || "Staff",
       Email: profile.Email || "",
       Notifications: profile.Notifications !== undefined ? profile.Notifications : true,
+      LowStockThreshold: profile.LowStockThreshold ?? 5,
       Theme: profile.Theme || "light",
       Language: profile.Language || "English",
       Units: profile.Units || "Metric (kg, cm)",
+      Img: profile.img || "",
     },
   });
 });
@@ -42,7 +45,7 @@ export const UpdateUserSettings = asyncHandler(async (req, res) => {
   const img=req.file?.filename;
   if (!userId) return res.status(401).json({ success: false, message: "Unauthorized." });
 
-  const { Email, Notifications, Theme, Language, Units } = req.body;
+  const { Email, Notifications, LowStockThreshold, Theme, Language, Units } = req.body;
   const user = await User.findById(userId).populate("UserProfile").exec();
   if (!user) return notFound(res, "User");
   const profile = user.UserProfile;
@@ -60,6 +63,26 @@ export const UpdateUserSettings = asyncHandler(async (req, res) => {
 
   if (Notifications !== undefined) {
     profile.Notifications = Notifications === "false" || Notifications === false ? false : true;
+  }
+
+  if (LowStockThreshold !== undefined) {
+    if (
+      (typeof LowStockThreshold !== "number" && typeof LowStockThreshold !== "string")
+      || String(LowStockThreshold).trim() === ""
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Low-stock threshold must be a valid non-negative number.",
+      });
+    }
+    const threshold = Number(LowStockThreshold);
+    if (!Number.isFinite(threshold) || threshold < 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Low-stock threshold must be a valid non-negative number.",
+      });
+    }
+    profile.LowStockThreshold = threshold;
   }
 
   if (Theme !== undefined) {
@@ -97,6 +120,7 @@ export const UpdateUserSettings = asyncHandler(async (req, res) => {
       Role: profile.Role,
       Email: profile.Email,
       Notifications: profile.Notifications,
+      LowStockThreshold: profile.LowStockThreshold ?? 5,
       Theme: profile.Theme,
       Language: profile.Language,
       Units: profile.Units,
@@ -129,6 +153,25 @@ export const ChangeUserPassword = asyncHandler(async (req, res) => {
   res.status(200).json({ success: true, message: "Password updated successfully." });
 });
 
+export const DeleteProfileImage = asyncHandler(async (req, res) => {
+  if (!req.id) return res.status(401).json({ success: false, message: "Unauthorized." });
+  
+  const user = await User.findById(req.id).exec();
+  const userprofile=await UserProfile.findById(user.UserProfile).exec();
+  if (!user) return notFound(res, "User");
+  if(!userprofile) return notFound(res, "UserProfile");
+
+  const profile = userprofile.img;
+  if (!profile) {
+    return res.status(404).json({ success: false, message: "Profile image not found." });
+  }else{
+
+  await userprofile.updateOne({ img: null }).exec();
+    await fsp.unlink(`public/img/${profile}`);
+  }
+
+  res.status(200).json({ success: true, message: "Profile image deleted successfully." });
+});
 export const DeleteUserAccount = asyncHandler(async (req, res) => {
   const userId = req.id;
   if (!userId) return res.status(401).json({ success: false, message: "Unauthorized." });

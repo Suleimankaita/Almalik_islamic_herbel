@@ -5,12 +5,27 @@ import { fileURLToPath } from "url";
 import mongoose from "mongoose";
 import Product from "../../models/Product.js";
 import Sales from "../../models/Sales.js";
+import User from "../../models/User.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const DEFAULT_LOW_STOCK_THRESHOLD = 5;
 const DEFAULT_TOP_SALES_LIMIT = 5;
 const MAX_TOP_SALES_LIMIT = 50;
+
+export const getStockThreshold = async (userId) => {
+    if (!userId) return DEFAULT_LOW_STOCK_THRESHOLD;
+
+    const user = await User.findById(userId)
+        .populate("UserProfile", "LowStockThreshold")
+        .lean()
+        .exec();
+    const threshold = Number(user?.UserProfile?.LowStockThreshold ?? DEFAULT_LOW_STOCK_THRESHOLD);
+
+    return Number.isFinite(threshold) && threshold >= 0
+        ? threshold
+        : DEFAULT_LOW_STOCK_THRESHOLD;
+};
 
 const normalizeQuantity = (value) => {
     const parsed = Number(value);
@@ -73,7 +88,9 @@ const parseDateBoundary = (value, endOfDay = false) => {
 
 export const GetProducts = asyncHandler(async (req, res) => {
     const filter = String(req.query.filter || "all").toLowerCase();
-    const rawThreshold = Number(req.query.threshold ?? DEFAULT_LOW_STOCK_THRESHOLD);
+    const rawThreshold = req.query.threshold === undefined
+        ? await getStockThreshold(req.id)
+        : Number(req.query.threshold);
     // Clamp to >= 0 — a negative threshold would make "low stock" match
     // nothing (or match everything under $lte, depending on data), which
     // is never a meaningful business rule here.
@@ -106,16 +123,39 @@ export const GetProducts = asyncHandler(async (req, res) => {
     });
 });
 
+export const GetLowStockProducts = asyncHandler(async (req, res) => {
+    if (!req.id) {
+        return res.status(401).json({
+            success: false,
+            message: "Unauthorized.",
+        });
+    }
+
+    const threshold = await getStockThreshold(req.id);
+    const products = await Product.find({
+        Quantity: { $lte: threshold },
+    }).sort({ Quantity: 1, ProductName: 1 });
+
+    res.status(200).json({
+        success: true,
+        threshold,
+        count: products.length,
+        products,
+    });
+});
+
 export const GetProduct = asyncHandler(async (req, res) => {
     const { id } = req.params;
     if (!requireValidObjectId(id, res)) return;
 
     const product = await Product.findById(id);
     if (!product) return notFound(res, "Product");
+    const threshold = await getStockThreshold(req.id);
 
     res.status(200).json({
         success: true,
         product,
+        threshold,
     });
 });
 
@@ -371,12 +411,14 @@ export const UpdateProduct = asyncHandler(async (req, res) => {
 
     await product.save();
 
-    const notifications = buildLowStockNotifications([product], DEFAULT_LOW_STOCK_THRESHOLD);
+    const threshold = await getStockThreshold(req.id);
+    const notifications = buildLowStockNotifications([product], threshold);
 
     res.status(200).json({
         success: true,
         message: "Product updated successfully.",
         product,
+        threshold,
         notifications,
     });
 });
@@ -437,6 +479,7 @@ export const SetProductStatus = asyncHandler(async (req, res) => {
 
 export default {
     GetProducts,
+    GetLowStockProducts,
     GetProduct,
     GetTopSales,
     UpdateProduct,

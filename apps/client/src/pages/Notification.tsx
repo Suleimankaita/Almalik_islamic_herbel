@@ -1,12 +1,22 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { useSelector } from 'react-redux';
 import {
   Bell, Check, Trash2, ShoppingBag, PackageX,
   ShieldAlert, Sparkles, CheckCircle2,
   Filter, Clock, ArrowRight
 } from 'lucide-react';
+import { GetToken } from '../Features/AppSlice';
+import { useGetLowStockProductsQuery } from '../Features/api/DataSlice';
 
 // --- Types & Initial Data ---
 type NotifType = 'order' | 'inventory' | 'system' | 'alert';
+
+interface LowStockProduct {
+  _id: string;
+  ProductName?: string;
+  Quantity?: number;
+}
 
 interface Notification {
   id: string;
@@ -18,72 +28,56 @@ interface Notification {
   link?: string;
 }
 
-const INITIAL_NOTIFICATIONS: Notification[] = [
-  {
-    id: '1',
-    type: 'order',
-    title: 'New Online Order Received',
-    message: 'Order #ALM-8892 for 3x Black Seed Oil & 1x Sidr Honey has been paid and requires fulfillment.',
-    timestamp: '2 mins ago',
-    isRead: false,
-    link: '#view-order'
-  },
-  {
-    id: '2',
-    type: 'inventory',
-    title: 'Critical Stock Alert',
-    message: 'Nigella Sativa Powder has dropped below the minimum threshold (Only 6 units remaining).',
-    timestamp: '1 hour ago',
-    isRead: false,
-    link: '#restock'
-  },
-  {
-    id: '3',
-    type: 'alert',
-    title: 'Failed Payment Attempt',
-    message: 'A customer attempted to pay ₦45,000 via card, but the transaction was declined by the gateway.',
-    timestamp: '3 hours ago',
-    isRead: true,
-  },
-  {
-    id: '4',
-    type: 'system',
-    title: 'System Update Completed',
-    message: 'Your POS dashboard has been successfully updated to version 2.4.0. Enjoy the new reporting features!',
-    timestamp: 'Yesterday, 10:00 AM',
-    isRead: true,
-  },
-  {
-    id: '5',
-    type: 'order',
-    title: 'Large Wholesale Order',
-    message: 'Al Barakah Clinic just placed a wholesale order for 50x Olive Oil (250ml).',
-    timestamp: 'Yesterday, 2:30 PM',
-    isRead: true,
-    link: '#view-order'
-  }
-];
-
 export default function NotificationCenter() {
-  const [notifications, setNotifications] = useState<Notification[]>(INITIAL_NOTIFICATIONS);
+  const token = useSelector(GetToken);
+  const { data, isLoading, isError } = useGetLowStockProductsQuery(
+    undefined,
+    { skip: !token, pollingInterval: 30000, refetchOnFocus: true },
+  );
+  const [readNotificationIds, setReadNotificationIds] = useState<string[]>([]);
+  const [dismissedNotificationIds, setDismissedNotificationIds] = useState<string[]>([]);
   const [activeFilter, setActiveFilter] = useState<'all' | 'unread' | 'order' | 'inventory' | 'system'>('all');
+  const notifications = useMemo<Notification[]>(() => {
+    const products: LowStockProduct[] = Array.isArray(data?.products) ? data.products : [];
+    return products
+      .map((product) => {
+        const id = `low-stock-${product._id}`;
+        return {
+          id,
+          type: 'inventory' as const,
+          title: 'Low stock alert',
+          message: `${product.ProductName || 'Product'} has ${Number(product.Quantity ?? 0)} unit(s) remaining. The alert threshold is ${Number(data?.threshold ?? 5)}.`,
+          timestamp: `${Number(product.Quantity ?? 0)} in stock`,
+          isRead: readNotificationIds.includes(id),
+          link: `/inventory/view-products/${product._id}`,
+        };
+      })
+      .filter((notification) => !dismissedNotificationIds.includes(notification.id));
+  }, [data, dismissedNotificationIds, readNotificationIds]);
 
   // --- Active Functionalities ---
   
   const markAsRead = (id: string) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+    setReadNotificationIds((previous) => previous.includes(id) ? previous : [...previous, id]);
   };
 
   const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+    setReadNotificationIds((previous) => [
+      ...new Set([...previous, ...notifications.map((notification) => notification.id)]),
+    ]);
   };
 
   const deleteNotification = (id: string) => {
-    setNotifications(prev => prev.filter(n => n.id !== id));
+    setDismissedNotificationIds((previous) => previous.includes(id) ? previous : [...previous, id]);
   };
 
   const clearAllRead = () => {
-    setNotifications(prev => prev.filter(n => !n.isRead));
+    setDismissedNotificationIds((previous) => [
+      ...new Set([
+        ...previous,
+        ...notifications.filter((notification) => notification.isRead).map((notification) => notification.id),
+      ]),
+    ]);
   };
 
   // --- Derived State & Filtering ---
@@ -153,7 +147,7 @@ export default function NotificationCenter() {
             ].map((nav) => (
               <button
                 key={nav.id}
-                onClick={() => setActiveFilter(nav.id as any)}
+                onClick={() => setActiveFilter(nav.id as typeof activeFilter)}
                 className={`w-full flex items-center justify-between px-4 py-3 rounded-2xl transition-all duration-200 font-bold text-sm ${
                   activeFilter === nav.id 
                     ? 'bg-slate-900 text-white shadow-md' 
@@ -202,7 +196,15 @@ export default function NotificationCenter() {
 
           {/* Notification List */}
           <div className="space-y-3">
-            {filteredNotifications.length === 0 ? (
+            {isError ? (
+              <div role="alert" className="rounded-3xl border border-red-200 bg-red-50 p-6 text-sm font-medium text-red-700">
+                Low-stock notifications could not be loaded. Please try again later.
+              </div>
+            ) : isLoading ? (
+              <div role="status" className="rounded-3xl border border-slate-200 bg-white p-8 text-center text-sm font-medium text-slate-500">
+                Loading low-stock notifications...
+              </div>
+            ) : filteredNotifications.length === 0 ? (
               // Empty State
               <div className="bg-white/50 border-2 border-dashed border-slate-200 rounded-3xl p-12 flex flex-col items-center justify-center text-center">
                 <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center text-slate-400 mb-4">
@@ -250,9 +252,9 @@ export default function NotificationCenter() {
                     
                     {/* Action Link (Optional) */}
                     {notif.link && (
-                      <button className="mt-3 text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1">
+                      <Link to={notif.link} className="mt-3 text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1">
                         Take Action <ArrowRight size={14} />
-                      </button>
+                      </Link>
                     )}
                   </div>
 
