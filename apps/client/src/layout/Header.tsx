@@ -1,9 +1,10 @@
 import { Menu, Search, Plus, ShoppingBag, PackagePlus, Bell, Mail, ChevronDown } from 'lucide-react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { GetToggle, GetToken, SetToggle } from '../Features/AppSlice';
 import { GetUserDetails } from '../Features/AppSlice';
 import { useGetLowStockProductsQuery, useGetUserSettingsQuery } from '../Features/api/DataSlice';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 
 
 interface UserInfo{
@@ -21,6 +22,9 @@ const normalizePathname = (pathname: string): string => {
 
 export default function Header(): React.JSX.Element {
   const location = useLocation();
+  const navigate = useNavigate();
+  const searchInput = useRef<HTMLInputElement>(null);
+  const [searchText, setSearchText] = useState('');
   const currentPath = normalizePathname(location.pathname);
   const currentPage = currentPath === '/'
     ? 'Dashboard'
@@ -30,6 +34,7 @@ export default function Header(): React.JSX.Element {
           '/sales-pos': 'Sales (POS)',
           '/sales (pos)': 'Sales (POS)',
           '/inventory': 'Inventory',
+          '/search': 'Product Search',
           '/add product': 'Add Product',
           '/customers': 'Customers',
           '/suppliers': 'Suppliers',
@@ -53,6 +58,25 @@ export default function Header(): React.JSX.Element {
   const {Username,Role}:UserInfo=useSelector(GetUserDetails)
   const dispatch = useDispatch();
 
+  useEffect(() => {
+    const handleShortcut = (event: KeyboardEvent) => {
+      if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        searchInput.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleShortcut);
+    return () => window.removeEventListener('keydown', handleShortcut);
+  }, []);
+
+  const submitSearch = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const query = searchText.trim();
+    if (query) navigate(`/search?q=${encodeURIComponent(query)}`);
+    else navigate('/search');
+    searchInput.current?.blur();
+  };
+
   return (
     <header className="sticky top-0 z-20 flex flex-wrap items-center gap-3 border-b border-gray-200 bg-white px-3 py-3 sm:px-4 lg:px-6">
       <button
@@ -72,17 +96,30 @@ export default function Header(): React.JSX.Element {
         <Menu size={20} />
       </button>
 
-      <div className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 sm:max-w-md">
+      <form onSubmit={submitSearch} role="search" className="flex min-w-0 flex-1 items-center gap-2 rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 transition focus-within:border-brand-green focus-within:ring-2 focus-within:ring-green-100 sm:max-w-md">
         <Search size={16} className="shrink-0 text-gray-400" />
         <input
-          type="text"
-          placeholder="Search products, invoices, customers..."
-          className="min-w-0 flex-1 bg-transparent text-[13px] text-gray-600 outline-none placeholder:text-gray-400"
+          ref={searchInput}
+          type="search"
+          value={searchText}
+          onChange={(event) => setSearchText(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              setSearchText('');
+              searchInput.current?.blur();
+            }
+          }}
+          aria-label="Search products"
+          placeholder="Search products by name, SKU or barcode"
+          className="min-w-0 flex-1 bg-transparent text-[13px] text-gray-700 outline-none placeholder:text-gray-400"
         />
+        <button type="submit" aria-label="Search" className="rounded-md p-1 text-gray-500 transition hover:bg-white hover:text-brand-green">
+          <Search size={15} />
+        </button>
         <kbd className="hidden rounded border border-gray-200 bg-white px-1.5 py-0.5 text-[10px] text-gray-400 sm:block">
           Ctrl + K
         </kbd>
-      </div>
+      </form>
       {currentPage && (
         <div aria-current="page" className="hidden rounded-lg bg-green-50 px-3 py-2 text-xs font-bold text-green-800 md:block">
           {currentPage}

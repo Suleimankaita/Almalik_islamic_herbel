@@ -4,6 +4,7 @@ export const ROLE_ACCESS: Record<AppRole, string[]> = {
   Admin: [
     '/',
     '/inventory',
+    '/search',
     '/inventory/view-products/:id',
     '/sales-pos',
     '/Sales (POS)',
@@ -24,6 +25,7 @@ export const ROLE_ACCESS: Record<AppRole, string[]> = {
   Manager: [
     '/',
     '/inventory',
+    '/search',
     '/inventory/view-products/:id',
     '/sales-pos',
     '/Sales (POS)',
@@ -37,7 +39,7 @@ export const ROLE_ACCESS: Record<AppRole, string[]> = {
     '/purchase',
     '/messages',
   ],
-  Staff: ['/', '/sales-pos', '/Sales (POS)', '/notifications', '/settings', '/messages'],
+  Staff: ['/', '/search', '/sales-pos', '/Sales (POS)', '/notifications', '/settings', '/messages'],
 };
 
 export const normalizeRole = (role: unknown): AppRole =>

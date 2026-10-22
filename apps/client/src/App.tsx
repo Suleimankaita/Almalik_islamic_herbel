@@ -16,6 +16,7 @@ import UsersRoles from './pages/UsersRoles'
 import ComingSoon from './components/ComingSoon'
 import RoleRoute from './components/RoleRoute'
 import { Navigate } from 'react-router-dom'
+import ProductSearch from './pages/ProductSearch'
 const App = (): React.JSX.Element => {
 
 return (
@@ -28,6 +29,7 @@ return (
 
         <Route path='/' element={<DashboardHome />} />
         <Route path='/inventory' element={<Inventory />} />
+        <Route path='/search' element={<ProductSearch />} />
         <Route path='/Loading' element={<Loader    />} />
         <Route path='/ma' element={<ComingSoon title="Manager dashboard" />} />
         <Route path='/inventory/view-products/:id' element={<ViewProducts />} />
