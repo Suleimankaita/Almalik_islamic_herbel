@@ -1,5 +1,6 @@
 import jwt from "jsonwebtoken"
 import asynchandler from "express-async-handler"
+import authCookieOptions from "../../Config/AuthCookie.js";
 
 const RefreshToken=asynchandler(async(req,res)=>{
     const token =req.cookies?.jwt
@@ -9,12 +10,11 @@ const RefreshToken=asynchandler(async(req,res)=>{
         try {
             decode=jwt.verify(token,process.env.REFRESH_TOKEN_SECRET || "dev-refresh-token");
         } catch {
-            res.clearCookie("jwt");
+            res.clearCookie("jwt", authCookieOptions());
             return res.status(403).json({message:'Invalid refresh token'})
         }
         const {id,Role,Username}=decode?.UserInfo
         
-        console.log(decode)
         const accesstoken=jwt.sign({
             UserInfo:{
                 id,
@@ -37,12 +37,10 @@ const RefreshToken=asynchandler(async(req,res)=>{
     ,{
         expiresIn:'7d'
     })
-    res.cookie('jwt',refreshtoken,{httpOnly:true,
-            httpOnly: true,
-    secure: process.env.NODE_ENV === "production",
-    sameSite: "strict",
-    maxAge: 7 * 24 * 60 * 60 * 1000
-})
+    res.cookie('jwt',refreshtoken,{
+        ...authCookieOptions(),
+        maxAge: 7 * 24 * 60 * 60 * 1000,
+    })
     res.status(201).json(accesstoken)
 
 })

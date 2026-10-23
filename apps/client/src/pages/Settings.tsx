@@ -11,6 +11,7 @@
       UploadCloud,
       Shield,
       Trash2,
+      LogOut,
       ChevronRight,
       ChevronDown,
       X,
@@ -23,9 +24,12 @@
       useDeleteUserAccountMutation,
       useUpadateProfileImgMutation,
       useDeleteProfileImgMutation,
+      useLogoutMutation,
       } from '../Features/api/DataSlice';
-      import { useSelector } from 'react-redux';
-      import { GetToken } from '../Features/AppSlice';
+      import { useDispatch, useSelector } from 'react-redux';
+      import { GetToken, setToken } from '../Features/AppSlice';
+      import { useNavigate } from 'react-router-dom';
+      import ApiSlice from '../Features/api/ApiSlice';
 
       // --- Types & Interfaces ---
 
@@ -59,6 +63,7 @@
       }
       handler();
       };
+
       document.addEventListener('mousedown', listener);
       document.addEventListener('touchstart', listener);
       return () => {
@@ -215,8 +220,11 @@
       }>({ isOpen: false, title: '', value: '', type: 'text', onSave: async () => {} });
 
       const token=useSelector(GetToken)
+      const dispatch = useDispatch();
+      const navigate = useNavigate();
 
       const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+      const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
       const { data: settingsData, isLoading: isLoadingSettings, isFetching: isFetchingSettings } = useGetUserSettingsQuery({token},{ 
       pollingInterval:1000
@@ -226,6 +234,7 @@
       const [changePassword, { isLoading: isChangingPassword }] = useChangeUserPasswordMutation();
       const [deleteAccount, { isLoading: isDeletingAccount }] = useDeleteUserAccountMutation();
       const [deleteProfileImg, { isLoading: isDeletingProfileImg }] = useDeleteProfileImgMutation();
+      const [logout, { isLoading: isLoggingOut }] = useLogoutMutation();
       useEffect(() => {
       setMounted(true);
       }, []);
@@ -289,6 +298,23 @@
       } catch (err: any) {
       showToast(err?.data?.message || err?.message || 'Unable to delete account');
       }
+      };
+
+      const handleLogout = async () => {
+      let logoutError: unknown;
+      try {
+      await logout().unwrap();
+      } catch (error) {
+      logoutError = error;
+      }
+
+      dispatch(setToken(null));
+      dispatch(ApiSlice.util.resetApiState());
+      setIsLogoutModalOpen(false);
+      if (logoutError) {
+      console.error('The server could not confirm logout; clearing the local session.', logoutError);
+      }
+      navigate('/login', { replace: true });
       };
 
       const handleProfilePhotoChange = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -628,6 +654,14 @@
       delay={550}
       onClick={() => setIsDeleteModalOpen(true)}
       />
+      <div className="mx-4 h-px bg-gray-100 transition-colors" />
+      <SettingItem
+      icon={LogOut}
+      title="Log out"
+      description="Sign out of this account on this device"
+      delay={600}
+      onClick={() => setIsLogoutModalOpen(true)}
+      />
       </div>
       </section>
       </main>
@@ -715,6 +749,60 @@
       </button>
       </div>
       </div>
+      </div>
+      )}
+
+      {isLogoutModalOpen && (
+      <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 backdrop-blur-sm animate-in fade-in duration-200"
+      onMouseDown={(event) => {
+      if (event.target === event.currentTarget && !isLoggingOut) setIsLogoutModalOpen(false);
+      }}
+      >
+      <section
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="logout-modal-title"
+      className="w-full max-w-md rounded-2xl bg-white p-6 shadow-2xl animate-in zoom-in-95 duration-200"
+      >
+      <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-emerald-50">
+      <LogOut className="h-6 w-6 text-[#2C5234]" aria-hidden="true" />
+      </div>
+      <h3 id="logout-modal-title" className="mb-2 text-center text-lg font-semibold text-gray-900">
+      Log out of your account?
+      </h3>
+      <p className="mb-6 text-center text-sm text-gray-500">
+      You will be returned to the login page. You can sign in again at any time.
+      </p>
+      <div className="flex flex-col gap-3 sm:flex-row sm:justify-center">
+      <button
+      type="button"
+      disabled={isLoggingOut}
+      onClick={() => setIsLogoutModalOpen(false)}
+      className="w-full rounded-xl border border-gray-300 bg-white px-5 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto"
+      >
+      Cancel
+      </button>
+      <button
+      type="button"
+      disabled={isLoggingOut}
+      onClick={() => void handleLogout()}
+      className="inline-flex w-full items-center justify-center gap-2 rounded-xl bg-[#2C5234] px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-[#1e3a24] disabled:cursor-wait disabled:opacity-70 sm:w-auto"
+      >
+      {isLoggingOut ? (
+      <>
+      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/40 border-t-white" />
+      Signing out…
+      </>
+      ) : (
+      <>
+      <LogOut size={16} />
+      Log out
+      </>
+      )}
+      </button>
+      </div>
+      </section>
       </div>
       )}
 

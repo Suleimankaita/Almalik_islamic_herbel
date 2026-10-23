@@ -6,6 +6,7 @@ import path from "path";
 import multer from "multer";
 import cookie_parser from "cookie-parser";
 import mongoose from "mongoose";
+import AdminRegistration from "./Controllers/Auth/AdminReg.js";
 import authRoutes from "./Routes/Login.js";
 import { fileURLToPath } from "url";
 import Reg from "./Routes/Registration.js"
@@ -73,10 +74,10 @@ app.use((req, res, next) => {
 console.log("MongoDB connected")
   app.listen(PORT,"0.0.0.0", () => {
     console.log(`Server running on port ${PORT}`);
-
   });
 })
 
+app.use(AdminRegistration)
     // app.use("/api/Product",upload.single('img'), Product);
 
     app.use(

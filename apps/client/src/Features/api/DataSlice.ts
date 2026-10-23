@@ -79,6 +79,12 @@ const DataSlice = ApiSlice.injectEndpoints({
                 method:'POST'
             })
         }),
+        Logout: builder.mutation({
+            query: () => ({
+                url: '/api/auth/Logout',
+                method: 'POST',
+            }),
+        }),
         GetUserSettings: builder.query({
             query: ({id}) => ({
                 url: 'api/profile',
@@ -321,6 +327,7 @@ export const {
     useGetAllDataQuery,
     useLoginMutation,
     useRefreshTokenMutation,
+    useLogoutMutation,
     useGetUserSettingsQuery,
     useUpdateUserSettingsMutation,
     useChangeUserPasswordMutation,

@@ -1,10 +1,10 @@
 import Checkfields from "../../../../packages/utils/FieldCheck.ts";
 import User from "../../models/User.js";
-import asynchanler from "express-async-handler";
 import UserProfile from "../../models/UserProfile.js";
+import asynchanler from "express-async-handler";
 
 const Registration=asynchanler(async(req,res)=>{
-
+    
     const {Username,Password,FirstName,LastName,Role}=req.body;
 
     const CheckInput=Checkfields({Username,Password,FirstName,LastName})
