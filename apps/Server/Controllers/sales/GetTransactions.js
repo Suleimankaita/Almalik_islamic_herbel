@@ -4,37 +4,35 @@ import Sales from "../../models/Sales.js";
 const normalizeDateValue = (value) => {
     if (!value) return null;
     const trimmed = String(value).trim();
-    if (!trimmed) return null;
-    const [year, month, day] = trimmed.split('-').map((part) => part.padStart(2, '0'));
-    if (!year || !month || !day) return null;
-    return `${year}-${month}-${day}`;
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) return null;
+    const date = new Date(`${trimmed}T00:00:00.000Z`);
+    return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== trimmed ? null : trimmed;
 };
 
 const buildDateQuery = (startDate, endDate) => {
     const normalizedStart = normalizeDateValue(startDate);
     const normalizedEnd = normalizeDateValue(endDate);
-
-    if (normalizedStart && normalizedEnd) {
-        return { Date: { $gte: normalizedStart, $lte: normalizedEnd } };
-    }
+    const createdAt = {};
 
     if (normalizedStart) {
-        return { Date: { $gte: normalizedStart } };
+        createdAt.$gte = new Date(`${normalizedStart}T00:00:00.000Z`);
     }
 
     if (normalizedEnd) {
-        return { Date: { $lte: normalizedEnd } };
+        const dayAfterEnd = new Date(`${normalizedEnd}T00:00:00.000Z`);
+        dayAfterEnd.setUTCDate(dayAfterEnd.getUTCDate() + 1);
+        createdAt.$lt = dayAfterEnd;
     }
 
-    return {};
+    return Object.keys(createdAt).length ? { createdAt } : {};
 };
 
 const escapeRegExp = (value) =>
     String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 export const GetTransactions = asyncHandler(async (req, res) => {
-    const page = Number(req.query.page) || 1;
-    const limit = Number(req.query.limit) || 20;
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = Math.min(100, Math.max(1, Number(req.query.limit) || 20));
     const skip = (page - 1) * limit;
     const query = buildDateQuery(req.query.startDate, req.query.endDate);
 
@@ -46,7 +44,11 @@ export const GetTransactions = asyncHandler(async (req, res) => {
     }
 
     const [transactions, totalCount] = await Promise.all([
-        Sales.find(query).sort({ createdAt: -1 }).skip(skip).limit(limit),
+        Sales.find(query)
+            .populate("User", "Username")
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit),
         Sales.countDocuments(query),
     ]);
 

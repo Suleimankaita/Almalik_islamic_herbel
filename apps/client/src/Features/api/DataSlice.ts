@@ -260,12 +260,15 @@ const DataSlice = ApiSlice.injectEndpoints({
             ],
         }),
         CreateSale: builder.mutation({
-            query: (body: any) => ({
+            query: (body: { items: { id: string; quantity: number }[]; paymentMethod: string }) => ({
                 url: `/api/sales`,
                 method: 'POST',
                 body,
             }),
-            invalidatesTags: [{ type: "Products" as const, id: "LIST" }]
+            invalidatesTags: [
+                { type: "Products" as const, id: "LIST" },
+                { type: "Sales" as const, id: "LIST" },
+            ]
         }),
         DeleteProduct: builder.mutation({
             query:({token,id}:{token?: string; id:string})=>{
@@ -299,7 +302,8 @@ const DataSlice = ApiSlice.injectEndpoints({
                     method:'GET',
                     headers: Object.keys(headers).length ? headers : undefined
                 };
-            }
+            },
+            providesTags: [{ type: "Sales" as const, id: "LIST" }],
         }),
         GetTopSales:builder.query({
             query:({token, limit = 5, startDate, endDate})=>{

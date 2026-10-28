@@ -17,6 +17,7 @@ import ComingSoon from './components/ComingSoon'
 import RoleRoute from './components/RoleRoute'
 import { Navigate } from 'react-router-dom'
 import ProductSearch from './pages/ProductSearch'
+import SalesHistory from './pages/SalesHistory'
 const App = (): React.JSX.Element => {
 
 return (
@@ -35,6 +36,7 @@ return (
         <Route path='/inventory/view-products/:id' element={<ViewProducts />} />
         <Route path='/sales-pos' element={<Sale />} />
         <Route path='/Sales (POS)' element={<Navigate to="/sales-pos" replace />} />
+        <Route path='/sales-history' element={<SalesHistory />} />
         <Route path='/add product' element={<PurchaseOrderForm />} />
         <Route path='/customers' element={<ComingSoon title="Customers" />} />
         <Route path='/notifications' element={<NotificationCenter />} />

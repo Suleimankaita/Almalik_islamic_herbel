@@ -33,6 +33,7 @@ export default function Header(): React.JSX.Element {
       : ({
           '/sales-pos': 'Sales (POS)',
           '/sales (pos)': 'Sales (POS)',
+          '/sales-history': 'Sales History',
           '/inventory': 'Inventory',
           '/search': 'Product Search',
           '/add product': 'Add Product',

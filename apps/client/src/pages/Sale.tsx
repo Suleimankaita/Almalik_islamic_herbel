@@ -1,4 +1,4 @@
-import { useRef, useState, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import Swal from 'sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
 import { useSelector } from 'react-redux';
@@ -8,7 +8,7 @@ import {
   Search, User, Plus, Minus, Trash2, CreditCard, Banknote,
   Smartphone, ShoppingCart, Box, X, ChevronRight, RefreshCw
 } from 'lucide-react';
-import Logo from "../assets/Logo.png"
+import { formatCurrency, printSalesReceipt, type PrintableSaleItem } from '../utils/printSalesReceipt';
 
 // --- Types ---
 type Product = {
@@ -46,19 +46,7 @@ const PAYMENT_METHODS = [
   { id: 'pos', label: 'POS', icon: Smartphone },
 ];
 
-// --- Store / receipt config — edit these to match the real business ---
-const STORE = {
-  name: 'Al Malik Islamic Medicine',
-  tagline: 'Halal & Sunnah-based Wellness Store',
-  address: 'Kaduna State Unguwar Dosa, Nigeria',
-  phone: '+234 8145048160',
-  email: 'ALmalik_Islamic_Medicine@gmail.com',
-  // Swap for a real hosted logo URL (PNG/SVG) when one is available.
-  logoUrl: Logo,
-};
-
 export default function POS() {
-  const receiptCounter = useRef(0);
   const [cart, setCart] = useState<CartItem[]>([]);
   const [activeCategory, setActiveCategory] = useState('All Products');
   const [searchQuery, setSearchQuery] = useState('');
@@ -70,6 +58,7 @@ export default function POS() {
 
   // --- Actions ---
   const handleAddToCart = (product: Product) => {
+    if (isCreating) return;
     setCart(prev => {
       const existing = prev.find(item => item.id === product.id);
       if (existing) {
@@ -88,6 +77,7 @@ export default function POS() {
   };
 
   const updateQuantity = (id: string, delta: number) => {
+    if (isCreating) return;
     setCart(prev => prev.map(item => {
       if (item.id === id) {
         const newQty = Math.max(1, item.quantity + delta);
@@ -102,10 +92,12 @@ export default function POS() {
   };
 
   const removeFromCart = (id: string) => {
+    if (isCreating) return;
     setCart(prev => prev.filter(item => item.id !== id));
   };
 
   const clearCart = async () => {
+    if (isCreating) return;
     const res = await Swal.fire({ title: 'Clear cart?', text: 'Remove all items from the cart.', showCancelButton: true, confirmButtonText: 'Clear', icon: 'question' });
     if (res.isConfirmed) setCart([]);
   };
@@ -144,222 +136,40 @@ export default function POS() {
   const total = subTotal - totalDiscount;
 
   const handlePay = async () => {
-    if (cart.length === 0) return;
+    if (cart.length === 0 || isCreating) return;
 
     const confirm = await Swal.fire({ title: 'Complete sale?', html: `Total: <strong>${formatCurrency(total)}</strong>`, showCancelButton: true, confirmButtonText: 'Pay', icon: 'question' });
     if (!confirm.isConfirmed) return;
 
     try {
-      Swal.fire({ title: 'Processing...', allowOutsideClick: false, didOpen: () => Swal.showLoading(), showConfirmButton: false });
-
-      const saleCart = cart.map(i => ({ id: i.id, name: i.name, variant: i.variant, price: i.price, quantity: i.quantity }));
-      const body = { items: cart.map(i => ({ id: i.id, quantity: i.quantity, Quantity: i.quantity })) };
+      const body = {
+        items: cart.map(i => ({ id: i.id, quantity: i.quantity })),
+        paymentMethod,
+      };
       await createSaleApi(body).unwrap();
-      Swal.close();
-      const printed = await Swal.fire({ title: 'Sale recorded', text: 'Would you like to print a receipt?', icon: 'success', showCancelButton: true, confirmButtonText: 'Print', cancelButtonText: 'Done' });
-
-      if (printed.isConfirmed) {
-        printReceipt(saleCart);
-      }
-
       setCart([]);
-      refetch();
+      void refetch();
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: 'Sale recorded. You can start the next sale.',
+        showConfirmButton: false,
+        timer: 2500,
+        timerProgressBar: true,
+      });
     } catch (err: unknown) {
-      Swal.close();
       const error = err as { data?: { message?: string }; message?: string };
       const msg = error.data?.message || error.message || 'Could not complete sale.';
       Swal.fire({ icon: 'error', title: 'Sale failed', text: msg });
     }
   };
 
-  const generateReceiptNo = () => {
-    const now = new Date();
-    const stamp = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
-    receiptCounter.current += 1;
-    return `AM-${stamp}-${String(receiptCounter.current).padStart(4, '0')}`;
-  };
-
-  const escapeHtml = (value: string) =>
-    value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-
-  const printReceipt = (items: { id: string; name: string; variant: string; price: number; quantity: number }[]) => {
-    if (!items || !items.length) return;
-
-    const now = new Date();
-    const receiptNo = generateReceiptNo();
-    const activeMethod = PAYMENT_METHODS.find((m) => m.id === paymentMethod);
-
-    const dateStr = now.toISOString().split('T')[0];
-    const timeStr = now.toLocaleTimeString()
-
-    const subtotal = items.reduce((s, it) => s + it.price * it.quantity, 0);
-    const taxAmt = subtotal * 0.075;
-    const totalAmt = subtotal + taxAmt;
-    const totalUnits = items.reduce((s, it) => s + it.quantity, 0);
-
-    const lines = items.map(i => `
-      <tr>
-        <td class="cell item-cell">
-          <div class="item-name">${escapeHtml(i.name)}${i.variant ? ` <span class="muted">(${escapeHtml(i.variant)})</span>` : ''}</div>
-          <div class="item-id">ID: ${escapeHtml(i.id).slice(-10)}</div>
-        </td>
-        <td class="cell" style="text-align:center">${i.quantity}</td>
-        <td class="cell" style="text-align:right">${formatCurrency(i.price)}</td>
-        <td class="cell" style="text-align:right">${formatCurrency(i.price * i.quantity)}</td>
-      </tr>
-    `).join('');
-
-    const logoBlock = STORE.logoUrl
-      ? `<img src="${STORE.logoUrl}" alt="${escapeHtml(STORE.name)}" class="logo-img" />`
-      : `<div class="logo-mark">${escapeHtml(
-          STORE.name
-            .split(' ')
-            .map((w) => w[0])
-            .slice(0, 2)
-            .join('')
-            .toUpperCase()
-        )}</div>`;
-
-    const html = `
-      <html>
-        <head>
-          <title>Receipt · ${receiptNo}</title>
-          <meta name="viewport" content="width=device-width,initial-scale=1" />
-          <style>
-            @page { size: 80mm auto; margin: 0; }
-            * { box-sizing: border-box; }
-            body {
-              font-family: 'Courier New', Courier, monospace;
-              color: #111;
-              margin: 0;
-              padding: 10px;
-              background: #f4f4f5;
-              display: flex;
-              justify-content: center;
-            }
-            .receipt {
-              width: 320px;
-              background: #fff;
-              padding: 20px 18px 24px;
-              margin: 16px 0;
-            }
-            .store-header { text-align: center; margin-bottom: 10px; }
-            .logo-img { max-width: 64px; max-height: 64px; margin: 0 auto 8px; display: block; object-fit: contain; }
-            .logo-mark {
-              width: 52px; height: 52px; border-radius: 50%;
-              background: #15803d; color: #fff;
-              display: flex; align-items: center; justify-content: center;
-              margin: 0 auto 8px; font-weight: bold; font-size: 18px; letter-spacing: 0.5px;
-            }
-            .store-name { font-size: 16px; font-weight: 700; letter-spacing: 0.5px; text-transform: uppercase; margin: 0; }
-            .store-tagline { font-size: 10.5px; color: #555; margin: 2px 0 0; }
-            .store-meta { font-size: 10px; color: #666; margin-top: 6px; line-height: 1.5; }
-            .divider { border: none; border-top: 1px dashed #999; margin: 12px 0; }
-            .meta-row { display: flex; justify-content: space-between; font-size: 11px; margin: 3px 0; }
-            .meta-row span:first-child { color: #666; }
-            .meta-row span:last-child { font-weight: 600; }
-            table { width: 100%; border-collapse: collapse; margin-top: 4px; font-size: 11px; }
-            thead th { text-align: left; font-size: 10px; text-transform: uppercase; letter-spacing: 0.4px; color: #666; padding: 4px 2px; border-bottom: 1px dashed #999; }
-            .cell { padding: 7px 2px; border-bottom: 1px dashed #eee; vertical-align: top; }
-            .item-name { font-weight: 600; }
-            .item-id { font-size: 9px; color: #888; margin-top: 1px; }
-            .muted { color: #888; font-weight: 400; }
-            .totals { margin-top: 10px; font-size: 11.5px; }
-            .totals-row { display: flex; justify-content: space-between; padding: 3px 0; }
-            .totals-row.grand { border-top: 1px dashed #999; margin-top: 6px; padding-top: 8px; font-size: 15px; font-weight: 700; }
-            .badge { display: inline-block; font-size: 9.5px; border: 1px solid #15803d; color: #15803d; padding: 2px 8px; border-radius: 999px; margin-top: 8px; }
-            .footer { text-align: center; margin-top: 16px; }
-            .footer p { margin: 3px 0; }
-            .thanks { font-size: 12px; font-weight: 700; }
-            .subtext { font-size: 9.5px; color: #777; }
-            .barcode { margin: 10px auto 4px; letter-spacing: 3px; font-size: 13px; text-align: center; }
-            @media print {
-              body { background: #fff; }
-              .receipt { margin: 0; width: 100%; }
-            }
-          </style>
-        </head>
-        <body>
-          <div class="receipt">
-            <div class="store-header">
-              ${logoBlock}
-              <p class="store-name">${escapeHtml(STORE.name)}</p>
-              <p class="store-tagline">${escapeHtml(STORE.tagline)}</p>
-              <p class="store-meta">${escapeHtml(STORE.address)}<br/>${escapeHtml(STORE.phone)} · ${escapeHtml(STORE.email)}</p>
-            </div>
-
-            <hr class="divider" />
-
-            <div class="meta-row"><span>Receipt No.</span><span>${receiptNo}</span></div>
-            <div class="meta-row"><span>Date</span><span>${dateStr}</span></div>
-            <div class="meta-row"><span>Time</span><span>${timeStr}</span></div>
-            <div class="meta-row"><span>Payment</span><span>${activeMethod ? activeMethod.label : 'Cash'}</span></div>
-            <div class="meta-row"><span>Cashier</span><span>POS Terminal 1</span></div>
-
-            <hr class="divider" />
-
-            <table>
-              <thead>
-                <tr>
-                  <th>Item</th>
-                  <th style="text-align:center">Qty</th>
-                  <th style="text-align:right">Price</th>
-                  <th style="text-align:right">Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${lines}
-              </tbody>
-            </table>
-
-            <div class="totals">
-              <div class="totals-row"><span>Items</span><span>${totalUnits}</span></div>
-              <div class="totals-row"><span>Subtotal</span><span>${formatCurrency(subtotal)}</span></div>
-            <!-- 
-    
-            <div class="totals-row"><span>VAT (7.5%)</span><span>${formatCurrency(taxAmt)}</span></div>
-            <div class="totals-row grand"><span>Total</span><span>${formatCurrency(totalAmt)}</span></div>
-            -->
-            </div>
-
-            <div class="footer">
-              <div class="barcode">*${receiptNo}*</div>
-              <p class="thanks">Thank you for shopping with us!</p>
-              <p class="subtext">Goods sold are non-refundable after 7 days.</p>
-              <span class="badge">Halal Certified · Sunnah Medicine</span>
-            </div>
-          </div>
-        </body>
-      </html>
-    `;
-
-    const win = window.open('', '_blank', 'toolbar=0,location=0,menubar=0,width=400,height=700');
-    if (!win) {
+  const printReceipt = (items: PrintableSaleItem[]) => {
+    const activeMethod = PAYMENT_METHODS.find((method) => method.id === paymentMethod);
+    if (!printSalesReceipt(items, { paymentMethod: activeMethod?.label })) {
       Swal.fire({ icon: 'error', title: 'Print blocked', text: 'Please allow pop-ups to print receipts.' });
-      return;
     }
-    win.document.open();
-    win.document.write(html);
-    win.document.close();
-    win.focus();
-
-    // Wait for content (and any logo image) to load before printing.
-    const triggerPrint = () => {
-      win.print();
-      setTimeout(() => win.close(), 300);
-    };
-    const logoEl = win.document.querySelector('.logo-img') as HTMLImageElement | null;
-    if (logoEl && !logoEl.complete) {
-      logoEl.onload = triggerPrint;
-      logoEl.onerror = triggerPrint;
-      setTimeout(triggerPrint, 1500); // fallback if the image never fires
-    } else {
-      setTimeout(triggerPrint, 250);
-    }
-  };
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN' }).format(amount).replace('NGN', '₦');
   };
 
   return (
@@ -428,17 +238,17 @@ export default function POS() {
               filteredProducts.map(product => (
                 <div 
                   key={product.id} 
-                  onClick={() => product.stock > 0 && handleAddToCart(product)}
+                  onClick={() => !isCreating && product.stock > 0 && handleAddToCart(product)}
                   onKeyDown={(event) => {
                     if (event.key === 'Enter' || event.key === ' ') {
                       event.preventDefault();
-                      if (product.stock > 0) handleAddToCart(product);
+                      if (!isCreating && product.stock > 0) handleAddToCart(product);
                     }
                   }}
                   role="button"
-                  tabIndex={product.stock > 0 ? 0 : -1}
-                  aria-disabled={product.stock <= 0}
-                  className={`relative group flex flex-col rounded-2xl border bg-white p-3 transition-all duration-300 ${product.stock > 0 ? 'cursor-pointer border-gray-200 hover:border-green-300 hover:shadow-xl hover:shadow-gray-200/50 active:scale-[0.98]' : 'cursor-not-allowed border-gray-100 opacity-60'}`}
+                  tabIndex={product.stock > 0 && !isCreating ? 0 : -1}
+                  aria-disabled={product.stock <= 0 || isCreating}
+                  className={`relative group flex flex-col rounded-2xl border bg-white p-3 transition-all duration-300 ${product.stock > 0 && !isCreating ? 'cursor-pointer border-gray-200 hover:border-green-300 hover:shadow-xl hover:shadow-gray-200/50 active:scale-[0.98]' : 'cursor-not-allowed border-gray-100 opacity-60'}`}
                 >
                   {/* Badge */}
                   {product.badge && (
@@ -487,7 +297,7 @@ export default function POS() {
               <ShoppingCart className="text-green-700" size={22} /> Current Order
             </h2>
             {cart.length > 0 && (
-              <button onClick={clearCart} className="text-xs font-bold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5">
+              <button onClick={clearCart} disabled={isCreating} className="text-xs font-bold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-lg transition-colors flex items-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-50">
                 <Trash2 size={14} /> Clear
               </button>
             )}
@@ -536,9 +346,9 @@ export default function POS() {
 
                     <div className="flex justify-between items-end mt-2">
                       <div className="flex items-center gap-1 bg-gray-50 border border-gray-200 rounded-lg p-0.5">
-                        <button type="button" aria-label={`Remove one ${item.name}`} onClick={() => updateQuantity(item.id, -1)} className="w-7 h-7 flex items-center justify-center text-gray-500 hover:bg-white hover:text-red-500 hover:shadow-sm rounded transition-all active:scale-95"><Minus size={14} /></button>
+                        <button type="button" aria-label={`Remove one ${item.name}`} onClick={() => updateQuantity(item.id, -1)} disabled={isCreating} className="w-7 h-7 flex items-center justify-center text-gray-500 hover:bg-white hover:text-red-500 hover:shadow-sm rounded transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"><Minus size={14} /></button>
                         <span className="w-6 text-center text-sm font-bold text-gray-800">{item.quantity}</span>
-                        <button type="button" aria-label={`Add one ${item.name}`} onClick={() => updateQuantity(item.id, 1)} disabled={item.quantity >= item.stock} className="w-7 h-7 flex items-center justify-center text-gray-500 hover:bg-white hover:text-green-600 hover:shadow-sm rounded transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"><Plus size={14} /></button>
+                        <button type="button" aria-label={`Add one ${item.name}`} onClick={() => updateQuantity(item.id, 1)} disabled={item.quantity >= item.stock || isCreating} className="w-7 h-7 flex items-center justify-center text-gray-500 hover:bg-white hover:text-green-600 hover:shadow-sm rounded transition-all active:scale-95 disabled:cursor-not-allowed disabled:opacity-40"><Plus size={14} /></button>
                       </div>
                     </div>
                   </div>
@@ -547,8 +357,9 @@ export default function POS() {
                   <button 
                     type="button"
                     onClick={() => removeFromCart(item.id)}
+                    disabled={isCreating}
                     aria-label={`Remove ${item.name} from order`}
-                    className="absolute right-2 top-2 rounded-lg p-1.5 text-gray-300 opacity-100 transition-all hover:bg-red-50 hover:text-red-500 md:opacity-0 md:group-hover:opacity-100"
+                    className="absolute right-2 top-2 rounded-lg p-1.5 text-gray-300 opacity-100 transition-all hover:bg-red-50 hover:text-red-500 disabled:cursor-not-allowed disabled:opacity-40 md:opacity-0 md:group-hover:opacity-100"
                   >
                     <Trash2 size={16} />
                   </button>
@@ -595,6 +406,7 @@ export default function POS() {
                   <button 
                     key={method.id}
                     onClick={() => setPaymentMethod(method.id)}
+                    disabled={isCreating}
                     className={`flex items-center justify-center gap-1.5 py-2.5 rounded-xl text-xs font-bold transition-all duration-200 border
                       ${isActive 
                         ? 'bg-green-50 border-green-500 text-green-700 shadow-sm' 
@@ -611,8 +423,8 @@ export default function POS() {
             {/* Print Receipt Button */}
             <button
               onClick={() => printReceipt(cart.map(i=>({ id:i.id, name:i.name, variant:i.variant, price:i.price, quantity:i.quantity })))}
-              disabled={cart.length === 0}
-              className={`w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-300 ${cart.length>0? 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
+              disabled={cart.length === 0 || isCreating}
+              className={`w-full py-3 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all duration-300 ${cart.length>0 && !isCreating? 'bg-white border border-gray-200 text-gray-700 hover:bg-gray-50' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
             >
               Print Receipt
             </button>

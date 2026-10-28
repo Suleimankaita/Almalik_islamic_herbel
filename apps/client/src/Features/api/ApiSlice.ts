@@ -240,7 +240,8 @@ const baseQueryWithReauth = async (
         "Integrations",
         "Nodes",
         "Dashboard",
-        "Products"
+        "Products",
+        "Sales"
     ],
 
 

@@ -1,107 +1,102 @@
-import Checkfields from "../../../../packages/utils/FieldCheck.ts";
 import Sales from "../../models/Sales.js";
 import User from "../../models/User.js";
-import asynchanler from "express-async-handler";
+import asyncHandler from "express-async-handler";
 import Product from "../../models/Product.js";
 import UserActivity from "../../models/UserActivity.js";
 
-const Sale=asynchanler(async(req,res)=>{
-   try{
+const Sale = asyncHandler(async (req, res) => {
+  const userId = req.id;
+  const items = req.body?.items;
+  const requestedPaymentMethod = req.body?.paymentMethod || "cash";
+  const paymentMethods = ["cash", "card", "pos"];
 
-       const userId=req.id
-       const {items}=req.body
-        const productids=items.map(item=>item?.id)
-       
-    const checkinput=Checkfields({userId,productids});
+  if (!Array.isArray(items) || items.length === 0) {
+    return res.status(400).json({ message: "Add at least one product to the sale." });
+  }
 
-    if(!checkinput.success)return res.status(400).json({message:checkinput.message});
+  if (!paymentMethods.includes(requestedPaymentMethod)) {
+    return res.status(400).json({ message: "Select a valid payment method." });
+  }
 
-    const userFound = await User.findById(userId).populate({
-        path: "UserProfile",
-        populate: {
-            path: "Sales"
-        }
-    })
+  const saleItems = items.map((item) => ({
+    id: String(item?.id || ""),
+    quantity: Number(item?.quantity ?? item?.Quantity),
+  }));
+  const productIds = saleItems.map((item) => item.id);
 
-    // Get all products
-const productIds = items.map(item => item.id);
+  if (saleItems.some((item) => !item.id || !Number.isInteger(item.quantity) || item.quantity <= 0)) {
+    return res.status(400).json({ message: "Each sale item needs a product ID and a positive whole-number quantity." });
+  }
 
-const foundProducts = await Product.find({
-    _id: { $in: productIds }
+  if (new Set(productIds).size !== productIds.length) {
+    return res.status(400).json({ message: "Each product may only appear once in a sale." });
+  }
+
+  const userFound = await User.findById(userId).populate("UserProfile");
+  if (!userFound?.UserProfile) {
+    return res.status(404).json({ message: "Cashier profile could not be found." });
+  }
+
+  const foundProducts = await Product.find({ _id: { $in: productIds } });
+  const productById = new Map(foundProducts.map((product) => [product._id.toString(), product]));
+
+  if (foundProducts.length !== productIds.length) {
+    return res.status(404).json({ message: "One or more products were not found." });
+  }
+
+  for (const item of saleItems) {
+    const product = productById.get(item.id);
+    if (!product) {
+      return res.status(404).json({ message: "Product not found." });
+    }
+
+    if (item.quantity > product.Quantity) {
+      return res.status(400).json({
+        message: `${product.ProductName} has only ${product.Quantity} item(s) remaining.`,
+      });
+    }
+  }
+
+  let total = 0;
+  const sales = [];
+
+  for (const item of saleItems) {
+    const product = productById.get(item.id);
+    if (!product) continue;
+
+    const sale = await Sales.create({
+      ProductName: product.ProductName,
+      SKU: product.SKU,
+      Barcode: product.Barcode,
+      User: userFound._id,
+      SalePrice: product.SalePrice,
+      ActualPrice: product.ActualPrice,
+      Quantity: item.quantity,
+      PaymentMethod: requestedPaymentMethod,
+    });
+
+    product.Quantity -= item.quantity;
+    await product.save();
+
+    userFound.UserProfile.Sales.push(sale._id);
+    sales.push(sale);
+    total += product.SalePrice * item.quantity;
+  }
+
+  const activity = await UserActivity.create({
+    Username: userFound.Username,
+    ActivtyType: "Sale",
+    ItemId: productIds,
+  });
+  userFound.UserProfile.Logs.push(activity._id);
+  await userFound.UserProfile.save();
+
+  return res.status(200).json({
+    message: "Sale completed successfully",
+    total,
+    count: sales.length,
+    sales,
+  });
 });
 
-if (foundProducts.length !== productIds.length) {
-    return res.status(404).json({
-        message: "One or more products were not found."
-    });
-}
-
-let total = 0;
-
-// First pass: validate stock
-for (const cartItem of items) {
-
-    const product = foundProducts.find(
-        p => p._id.toString() === cartItem.id
-    );
-
-    if (!product) {
-        return res.status(404).json({
-            message: "Product not found."
-        });
-    }
-
-    if(cartItem.Quantity <= 0){
-        return res.status(400).json({
-            message: `Quantity for ${product.ProductName} must be greater than zero.`
-        });
-    }
-
-    if (cartItem.quantity > product.Quantity) {
-        return res.status(400).json({
-            message: `${product.ProductName} has only ${product.Quantity} item(s) remaining.`
-        });
-    }
-        const sale=await Sales.create({
-            ...product,
-            User: userFound._id,
-            SalePrice:product.SalePrice,
-            ActualPrice:product.ActualPrice,
-            Quantity:Number(cartItem.quantity)
-        })
-        
-        console.log(sale._id)
-        
-        userFound.UserProfile?.Sales.push(sale._id)
-        
-        
-        total += product.SalePrice * cartItem.quantity;
-
-        product.Quantity -= cartItem.quantity;
-
-        await product.save();
-    
-        await userFound?.UserProfile.save();
-}
-
-// Second pass: decrement quantity 08037491303
-        console.log(productIds)
-        const Activityid=await UserActivity.create({
-                Username:userFound.Username,
-                  ActivtyType:"Sale",
-                  ItemId:productIds
-                  })  
-
-              userFound.UserProfile?.Logs.push(Activityid);
-              await userFound.save()
-
-    
-    res.status(200).json({message:'Sale completed successfully',total})
-
-}catch(e){
-    res.status(400).json({message:e.message})
-}
-})    
-
 export default Sale
-

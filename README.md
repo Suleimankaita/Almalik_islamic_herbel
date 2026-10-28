@@ -29,7 +29,7 @@ The project follows a **Monorepo Architecture**, making it easy to develop, main
 
 - Point of Sale (POS)
 - Receipt Printing
-- Sales History
+- Backend-backed sales history with product search, date filters, pagination, and per-product receipt printing
 - Discounts
 - Multiple Payment Methods
 - Customer Sales Records
