@@ -1,4 +1,5 @@
-﻿import { useSelector,useDispatch } from 'react-redux';
+import { useEffect, useState } from 'react';
+import { useSelector,useDispatch } from 'react-redux';
 import {
   LayoutDashboard,
   Package,
@@ -12,12 +13,14 @@ import {
   Bell,
   UserCog,
   Settings,
+  HandCoins,
   type LucideIcon,
 } from 'lucide-react';
 import { GetToken, GetToggle, GetUserDetails, SetToggle } from '../Features/AppSlice';
 import { ROLE_ACCESS, normalizeRole } from '../auth/roleAccess';
 import { NavLink } from 'react-router-dom';
 import Logo from "../assets/Logo.png"
+import { useGetLoansQuery } from '../Features/api/DataSlice';
 interface NavItem {
   label: string;
   icon: LucideIcon;
@@ -30,6 +33,8 @@ const navItems: NavItem[] = [
   { label: 'Inventory', icon: Package, path: '/inventory' },
   { label: 'Sales (POS)', icon: ShoppingCart, path: '/sales-pos' },
   { label: 'Sales History', icon: History, path: '/sales-history' },
+  { label: 'Loans', icon: HandCoins, path: '/loans' },
+  { label: 'Paid Loans', icon: HandCoins, path: '/loans/paid' },
   { label: 'Add Product', icon: Truck, path: '/add product' },
   { label: 'Customers', icon: Users, path: '/customers' },
   { label: 'Suppliers', icon: Building2, path: '/suppliers' },
@@ -49,6 +54,22 @@ export default function Sidebar() {
   const dispatch=useDispatch()
   const role = normalizeRole((useSelector(GetUserDetails) as { Role?: string } | null)?.Role);
   const token = useSelector(GetToken);
+  const [loanAlertDate, setLoanAlertDate] = useState('');
+  const { data: loansResponse } = useGetLoansQuery(undefined, {
+    skip: !token,
+    pollingInterval: 60000,
+  });
+  useEffect(() => {
+    const updateLoanAlertDate = () => {
+      setLoanAlertDate(new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10));
+    };
+    const timer = window.setTimeout(updateLoanAlertDate, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+  const upcomingLoanAlerts = (loansResponse?.loans ?? []).filter((loan: {
+    DueDate?: string;
+    PaidDate?: string;
+  }) => !loan.PaidDate && loan.DueDate && loan.DueDate <= loanAlertDate).length;
   const visibleNavItems = navItems.filter((item) =>
     token && ROLE_ACCESS[role].includes(item.path),
   );
@@ -92,7 +113,7 @@ export default function Sidebar() {
               <li key={item.label}>
                 <NavLink
                 to={item.path}
-                end={item.path === '/'}
+                end={item.path === '/' || item.path === '/loans'}
                   className={({ isActive }) => ` flex w-full items-center gap-3 rounded-lg px-3 py-2.5 text-[13.5px] font-medium transition-colors ${
                     isActive
                       ? 'bg-brand-green text-green-600 shadow-sm'
@@ -101,6 +122,11 @@ export default function Sidebar() {
                 >
                   <Icon className={`${!Open?'w-full':null}`} size={`${Open?17:20}`} />
                   <span className={`${!Open?'hidden':'block'} transition-all ease-in-out`}>{item.label}</span>
+                  {item.path === '/notifications' && upcomingLoanAlerts > 0 && (
+                    <span className="ml-auto inline-flex min-w-5 items-center justify-center rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-bold text-white" aria-label={`${upcomingLoanAlerts} loan payment reminders`}>
+                      {upcomingLoanAlerts}
+                    </span>
+                  )}
                 </NavLink>
               </li>
             );

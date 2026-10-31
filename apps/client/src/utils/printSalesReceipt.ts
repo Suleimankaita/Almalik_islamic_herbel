@@ -135,11 +135,7 @@ export function printSalesReceipt(
   <title>Receipt ${escapeHtml(receiptNo)}</title>
 
   <style>
-    /*
-      58mm thermal receipt.
-      Select the matching paper width in Windows printer settings.
-    */
-
+    /* PT280: 58mm paper roll, approximately 48mm printable width. */
     @page {
       size: 58mm auto;
       margin: 0;
@@ -149,177 +145,168 @@ export function printSalesReceipt(
       box-sizing: border-box;
     }
 
-    html {
-      width: 58mm;
-      margin: 0;
-      padding: 0;
-      background: #fff;
-    }
-
+    html,
     body {
       width: 58mm;
+      min-width: 0;
       margin: 0;
       padding: 0;
       background: #fff;
       color: #000;
+    }
+
+    body {
       font-family: Arial, Helvetica, sans-serif;
-      font-size: 10px;
+      font-size: 10.5pt;
       line-height: 1.35;
-      font-weight: 400;
+      font-weight: 600;
+      color: #000;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
     }
 
     .receipt {
       width: 48mm;
       margin: 0 auto;
-      padding: 2mm 0 3mm;
+      padding: 2mm 0 4mm;
       text-align: left;
-      overflow-wrap: anywhere;
+      overflow-wrap: break-word;
+      word-break: normal;
     }
-
-    /* Store identity */
 
     .header {
       text-align: center;
-      padding-bottom: 2mm;
-      border-bottom: 1px dashed #000;
+      padding-bottom: 2.5mm;
+      border-bottom: 0.25mm solid #000;
     }
 
     .logo {
       display: block;
-      width: 30px;
-      height: 30px;
+      width: 26px;
+      height: 26px;
       object-fit: contain;
       margin: 0 auto 2mm;
     }
 
     .store-name {
       margin: 0;
-      font-size: 12px;
-      line-height: 1.3;
+      font-size: 12pt;
+      line-height: 1.25;
       font-weight: 700;
     }
 
     .tagline {
-      margin: 1mm 0;
-      font-size: 9px;
+      margin: 1.5mm 0;
+      font-size: 9pt;
       font-weight: 600;
     }
 
     .contact {
       margin: 1.5mm 0 0;
-      font-size: 8px;
-      line-height: 1.5;
+      font-size: 9.5pt;
+      line-height: 1.4;
       overflow-wrap: anywhere;
     }
-
-    /* Receipt heading */
 
     .receipt-title {
       margin: 3mm 0;
       text-align: center;
-      font-size: 12px;
+      font-size: 12pt;
       font-weight: 700;
-      letter-spacing: 0.5px;
+      letter-spacing: 0;
     }
-
-    /* Transaction details */
 
     .details {
       width: 100%;
     }
 
-    .detail-row {
+    .detail-row,
+    .item-line,
+    .total-row {
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
       gap: 2mm;
-      margin: 0 0 1.5mm;
-      font-size: 9px;
+      width: 100%;
+    }
+
+    .detail-row {
+      margin: 0 0 1.7mm;
+      font-size: 10pt;
     }
 
     .detail-label {
-      flex-shrink: 0;
+      flex: 0 0 34%;
     }
 
     .detail-value {
+      flex: 1 1 auto;
       min-width: 0;
       text-align: right;
-      font-weight: 600;
+      font-weight: 700;
       overflow-wrap: anywhere;
     }
 
     .divider {
       height: 0;
       border: 0;
-      border-top: 1px dashed #000;
+      border-top: 0.25mm solid #000;
       margin: 2.5mm 0;
     }
 
-    /* Purchased products */
-
     .section-title {
       margin: 0 0 1mm;
-      font-size: 10px;
+      font-size: 10pt;
       font-weight: 700;
     }
 
     .item {
       padding: 2mm 0;
-      border-bottom: 1px dashed #888;
+      border-bottom: 0.2mm solid #999;
       break-inside: avoid;
       page-break-inside: avoid;
     }
 
     .item-name {
-      font-size: 10px;
+      font-size: 10pt;
       font-weight: 700;
-      line-height: 1.4;
+      line-height: 1.35;
       overflow-wrap: anywhere;
     }
 
     .variant {
       margin-top: 1mm;
-      font-size: 8px;
+      font-size: 9.5pt;
       overflow-wrap: anywhere;
     }
 
     .item-line {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 1mm;
       margin-top: 1.5mm;
+      font-size: 10pt;
     }
 
     .item-quantity {
-      flex: 1;
+      flex: 1 1 auto;
       min-width: 0;
-      font-size: 8.5px;
       overflow-wrap: anywhere;
     }
 
     .item-price {
-      flex-shrink: 0;
-      max-width: 48%;
+      flex: 0 0 auto;
+      max-width: 52%;
       text-align: right;
-      font-size: 9px;
+      font-size: 10pt;
       font-weight: 700;
       overflow-wrap: anywhere;
     }
-
-    /* Totals */
 
     .totals {
       margin-top: 2mm;
     }
 
     .total-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 2mm;
-      padding: 1mm 0;
-      font-size: 10px;
+      padding: 1.2mm 0;
+      font-size: 10pt;
     }
 
     .total-value {
@@ -330,45 +317,38 @@ export function printSalesReceipt(
     .grand-total {
       margin-top: 1.5mm;
       padding: 2mm 0;
-      border-top: 1px solid #000;
-      border-bottom: 1px solid #000;
-      font-size: 12px;
+      border-top: 0.3mm solid #000;
+      border-bottom: 0.3mm solid #000;
+      font-size: 12pt;
       font-weight: 700;
     }
-
-    /* Footer */
 
     .footer {
       margin-top: 3mm;
       padding-top: 2mm;
-      border-top: 1px dashed #000;
+      border-top: 0.25mm solid #000;
       text-align: center;
     }
 
     .receipt-number {
       margin: 0 0 2mm;
-      font-family: monospace;
-      font-size: 9px;
+      font-family: "Courier New", monospace;
+      font-size: 9pt;
       font-weight: 700;
       overflow-wrap: anywhere;
     }
 
     .thank-you {
       margin: 2mm 0;
-      font-size: 10px;
+      font-size: 10pt;
       font-weight: 700;
     }
 
     .footer-note {
-      margin: 1mm 0;
-      font-size: 8px;
+      margin: 1.5mm 0;
+      font-size: 9.5pt;
       line-height: 1.4;
     }
-
-    /*
-      Do not force print colors, background images,
-      shadows, or browser-specific scaling.
-    */
 
     @media screen {
       body {
@@ -392,10 +372,16 @@ export function printSalesReceipt(
         box-shadow: none !important;
       }
 
+      body {
+        color: #000 !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+      }
+
       .receipt {
         width: 48mm !important;
         margin: 0 auto !important;
-        padding: 2mm 0 3mm !important;
+        padding: 2mm 0 4mm !important;
       }
     }
   </style>
@@ -504,15 +490,8 @@ export function printSalesReceipt(
     if (started || printWindow.closed) return;
     started = true;
 
-    // Give the browser time to complete layout and paint.
-    printWindow.requestAnimationFrame(() => {
-      printWindow.requestAnimationFrame(() => {
-        if (printWindow.closed) return;
-
-        printWindow.focus();
-        printWindow.print();
-      });
-    });
+    printWindow.focus();
+    printWindow.print();
   };
 
   printWindow.onafterprint = () => {
@@ -532,16 +511,21 @@ export function printSalesReceipt(
       '.logo',
     ) as HTMLImageElement | null;
 
+    const printWhenReady = () => {
+      // Give Chromium one frame to finish laying out the receipt.
+      printWindow.setTimeout(startPrint, 350);
+    };
+
     if (!logo || logo.complete) {
-      startPrint();
+      printWhenReady();
       return;
     }
 
-    logo.addEventListener('load', startPrint, { once: true });
-    logo.addEventListener('error', startPrint, { once: true });
+    logo.addEventListener('load', printWhenReady, { once: true });
+    logo.addEventListener('error', printWhenReady, { once: true });
 
     // A broken or blocked image must not prevent printing.
-    printWindow.setTimeout(startPrint, 2000);
+    printWindow.setTimeout(printWhenReady, 2000);
   };
 
   if (printWindow.document.readyState === 'complete') {

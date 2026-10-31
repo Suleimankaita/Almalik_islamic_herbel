@@ -18,6 +18,8 @@ import RoleRoute from './components/RoleRoute'
 import { Navigate } from 'react-router-dom'
 import ProductSearch from './pages/ProductSearch'
 import SalesHistory from './pages/SalesHistory'
+import Loans from './pages/Loans'
+import PaidLoans from './pages/PaidLoans'
 const App = (): React.JSX.Element => {
 
 return (
@@ -37,6 +39,8 @@ return (
         <Route path='/sales-pos' element={<Sale />} />
         <Route path='/Sales (POS)' element={<Navigate to="/sales-pos" replace />} />
         <Route path='/sales-history' element={<SalesHistory />} />
+        <Route path='/loans' element={<Loans />} />
+        <Route path='/loans/paid' element={<PaidLoans />} />
         <Route path='/add product' element={<PurchaseOrderForm />} />
         <Route path='/customers' element={<ComingSoon title="Customers" />} />
         <Route path='/notifications' element={<NotificationCenter />} />
