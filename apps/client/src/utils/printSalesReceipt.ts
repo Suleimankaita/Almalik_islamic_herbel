@@ -8,6 +8,7 @@ export interface PrintableSaleItem {
   price: number;
   quantity: number;
 }
+// sshh
 
 interface ReceiptOptions {
   paymentMethod?: string;
