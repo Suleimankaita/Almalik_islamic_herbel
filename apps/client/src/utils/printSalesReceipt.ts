@@ -21,8 +21,8 @@ const STORE = {
   name: 'Al Malik Islamic Medicine',
   tagline: 'Halal & Sunnah-based Wellness Store',
   address: 'Shop N7 Ummi Plaza, Northwest Road, Kabuga, Nigeria',
-  phone: '+234 815 059 4632',
-  email: 'ALmalik_Islamic_Medicine@gmail.com',
+  phone: '+234 91 3040 2088',
+  email: 'Abdullahiabba157@gmail.com',
 };
 
 let receiptCounter = 0;
@@ -165,7 +165,7 @@ export function printSalesReceipt(
       font-family: Arial, Helvetica, sans-serif;
       font-size: 10px;
       line-height: 1.35;
-      font-weight: 400;
+      font-weight:1000;
     }
 
     .receipt {
@@ -186,28 +186,29 @@ export function printSalesReceipt(
 
     .logo {
       display: block;
-      width: 30px;
-      height: 30px;
+      width: 35px;
+      height: 35px;
       object-fit: contain;
       margin: 0 auto 2mm;
     }
 
     .store-name {
       margin: 0;
-      font-size: 12px;
+      font-size: 10px;
       line-height: 1.3;
-      font-weight: 700;
+      font-weight: 1000;
     }
 
     .tagline {
       margin: 1mm 0;
       font-size: 9px;
-      font-weight: 600;
+      font-weight: 1000;
     }
 
     .contact {
       margin: 1.5mm 0 0;
       font-size: 8px;
+      font-weight:1000;
       line-height: 1.5;
       overflow-wrap: anywhere;
     }
@@ -234,7 +235,8 @@ export function printSalesReceipt(
       align-items: flex-start;
       gap: 2mm;
       margin: 0 0 1.5mm;
-      font-size: 9px;
+      font-weight:500;
+      font-size: 10px;
     }
 
     .detail-label {
@@ -244,7 +246,7 @@ export function printSalesReceipt(
     .detail-value {
       min-width: 0;
       text-align: right;
-      font-weight: 600;
+      font-weight: 800;
       overflow-wrap: anywhere;
     }
 
@@ -279,6 +281,7 @@ export function printSalesReceipt(
 
     .variant {
       margin-top: 1mm;
+      font-weight:1000;
       font-size: 8px;
       overflow-wrap: anywhere;
     }
@@ -295,6 +298,7 @@ export function printSalesReceipt(
       flex: 1;
       min-width: 0;
       font-size: 8.5px;
+      font-weight:1000;
       overflow-wrap: anywhere;
     }
 
@@ -319,7 +323,7 @@ export function printSalesReceipt(
       align-items: flex-start;
       gap: 2mm;
       padding: 1mm 0;
-      font-size: 10px;
+      font-size:8px;
     }
 
     .total-value {
@@ -332,8 +336,8 @@ export function printSalesReceipt(
       padding: 2mm 0;
       border-top: 1px solid #000;
       border-bottom: 1px solid #000;
-      font-size: 12px;
-      font-weight: 700;
+      font-size: 10px;
+      font-weight: 1000;
     }
 
     /* Footer */
@@ -343,20 +347,21 @@ export function printSalesReceipt(
       padding-top: 2mm;
       border-top: 1px dashed #000;
       text-align: center;
+      font-weight:1000;
     }
 
     .receipt-number {
       margin: 0 0 2mm;
       font-family: monospace;
       font-size: 9px;
-      font-weight: 700;
+      font-weight: 1000;
       overflow-wrap: anywhere;
     }
 
     .thank-you {
       margin: 2mm 0;
       font-size: 10px;
-      font-weight: 700;
+      font-weight: 1000;
     }
 
     .footer-note {

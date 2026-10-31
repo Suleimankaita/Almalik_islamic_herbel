@@ -135,6 +135,13 @@ export default function POS() {
   const totalDiscount = cart.reduce((acc, item) => acc + item.discount, 0);
   const total = subTotal - totalDiscount;
 
+  const printReceipt = (items: PrintableSaleItem[]) => {
+    const activeMethod = PAYMENT_METHODS.find((method) => method.id === paymentMethod);
+    if (!printSalesReceipt(items, { paymentMethod: activeMethod?.label })) {
+      Swal.fire({ icon: 'error', title: 'Print blocked', text: 'Please allow pop-ups to print receipts.' });
+    }
+  };
+
   const handlePay = async () => {
     if (cart.length === 0 || isCreating) return;
 
@@ -147,7 +154,6 @@ export default function POS() {
         paymentMethod,
       };
       await createSaleApi(body).unwrap();
-      setCart([]);
       void refetch();
       Swal.fire({
         toast: true,
@@ -158,6 +164,11 @@ export default function POS() {
         timer: 2500,
         timerProgressBar: true,
       });
+
+      printReceipt(cart.map(i=>({ id:i.id, name:i.name, variant:i.variant, price:i.price, quantity:i.quantity })));
+      setCart([]);
+
+      
     } catch (err: unknown) {
       const error = err as { data?: { message?: string }; message?: string };
       const msg = error.data?.message || error.message || 'Could not complete sale.';
@@ -165,12 +176,8 @@ export default function POS() {
     }
   };
 
-  const printReceipt = (items: PrintableSaleItem[]) => {
-    const activeMethod = PAYMENT_METHODS.find((method) => method.id === paymentMethod);
-    if (!printSalesReceipt(items, { paymentMethod: activeMethod?.label })) {
-      Swal.fire({ icon: 'error', title: 'Print blocked', text: 'Please allow pop-ups to print receipts.' });
-    }
-  };
+
+  
 
   return (
     <div className="flex min-h-full flex-col bg-gray-100 font-sans text-gray-800 selection:bg-green-100 lg:h-full lg:flex-row lg:overflow-hidden">

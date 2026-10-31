@@ -81,7 +81,7 @@ const EMPTY_PRODUCT: Product = {
 };
 
 const currency = (value: number | undefined | null) =>
-  `$${(Number.isFinite(value) ? (value as number) : 0).toFixed(2)}`;
+  `${(Number.isFinite(value) ? (value as number) : 0).toFixed(2)}`;
 
 const userName = (u?: Transaction['User']) =>
   typeof u === 'string' ? u : u?.name ?? 'Unknown';
@@ -337,11 +337,11 @@ export default function ProductManagementView(): React.JSX.Element {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4">
                 <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl">
                   <p className="text-xs font-medium text-slate-500">Selling Price</p>
-                  <p className="text-xl sm:text-2xl font-bold text-slate-900 mt-1">{currency(product.SalePrice)}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-slate-900 mt-1">&#8358;{currency(product.SalePrice)}</p>
                 </div>
                 <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl">
                   <p className="text-xs font-medium text-slate-500">Purchase Price</p>
-                  <p className="text-xl sm:text-2xl font-bold text-slate-700 mt-1">{currency(product.ActualPrice)}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-slate-700 mt-1">&#8358;{currency(product.ActualPrice)}</p>
                 </div>
                 <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl">
                   <p className="text-xs font-medium text-slate-500">In Stock</p>
@@ -351,7 +351,7 @@ export default function ProductManagementView(): React.JSX.Element {
                 </div>
                 <div className="bg-slate-50 border border-slate-200 p-4 rounded-xl">
                   <p className="text-xs font-medium text-slate-500">Inventory Value</p>
-                  <p className="text-xl sm:text-2xl font-bold text-blue-600 mt-1">{currency(inventoryValue)}</p>
+                  <p className="text-xl sm:text-2xl font-bold text-blue-600 mt-1">&#8358;{currency(inventoryValue)}</p>
                 </div>
               </div>
 
