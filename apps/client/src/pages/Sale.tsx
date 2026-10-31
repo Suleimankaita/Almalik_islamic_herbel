@@ -164,23 +164,13 @@ export default function POS() {
   const totalDiscount = cart.reduce((acc, item) => acc + item.discount, 0);
   const total = subTotal - totalDiscount;
 
-<<<<<<< HEAD
-  const printReceipt = (items: PrintableSaleItem[]) => {
-    const activeMethod = PAYMENT_METHODS.find((method) => method.id === paymentMethod);
-=======
   const printReceipt = (items: PrintableSaleItem[], methodId = paymentMethod) => {
     const activeMethod = PAYMENT_METHODS.find((method) => method.id === methodId);
->>>>>>> 438f083870b348ea8771f80f7d23ef432d83dba9
     if (!printSalesReceipt(items, { paymentMethod: activeMethod?.label })) {
       Swal.fire({ icon: 'error', title: 'Print blocked', text: 'Please allow pop-ups to print receipts.' });
     }
   };
-<<<<<<< HEAD
 
-  const handlePay = async () => {
-    if (cart.length === 0 || isCreating) return;
-=======
->>>>>>> 438f083870b348ea8771f80f7d23ef432d83dba9
 
   const handlePay = async () => {
     if (isProcessing) return;
@@ -246,13 +236,11 @@ export default function POS() {
     if (!confirm.isConfirmed) return;
 
     try {
-<<<<<<< HEAD
       const body = {
         items: cart.map(i => ({ id: i.id, quantity: i.quantity })),
         paymentMethod,
       };
       await createSaleApi(body).unwrap();
-=======
       const items = cart.map((item) => ({ id: item.id, quantity: item.quantity }));
       const receiptItems = cart.map((item) => ({
         id: item.id,
@@ -274,7 +262,6 @@ export default function POS() {
       } else {
         await createSaleApi({ items, paymentMethod }).unwrap();
       }
->>>>>>> 438f083870b348ea8771f80f7d23ef432d83dba9
       void refetch();
       setLastTransactionWasSale(!isLoan);
       if (!isLoan) {
@@ -290,13 +277,11 @@ export default function POS() {
         timer: 2500,
         timerProgressBar: true,
       });
-<<<<<<< HEAD
 
       printReceipt(cart.map(i=>({ id:i.id, name:i.name, variant:i.variant, price:i.price, quantity:i.quantity })));
       setCart([]);
 
       
-=======
       setCart([]);
       if (isLoan) {
         setCustomerName('');
@@ -304,7 +289,6 @@ export default function POS() {
         setCustomerDetails('');
       }
 
->>>>>>> 438f083870b348ea8771f80f7d23ef432d83dba9
     } catch (err: unknown) {
       const error = err as { data?: { message?: string }; message?: string };
       const msg = error.data?.message || error.message || 'Could not complete sale.';
@@ -312,11 +296,8 @@ export default function POS() {
     }
   };
 
-<<<<<<< HEAD
 
   
-=======
->>>>>>> 438f083870b348ea8771f80f7d23ef432d83dba9
 
   return (
     <div className="flex min-h-full flex-col bg-gray-100 font-sans text-gray-800 selection:bg-green-100 lg:h-full lg:flex-row lg:overflow-hidden">
