@@ -27,6 +27,8 @@ export const GetUserSettings = asyncHandler(async (req, res) => {
     success: true,
     user: {
       id: user._id,
+      FirstName: user.FirstName || user.FirtsName || "",
+      LastName: user.LastName || "",
       Username: user.Username,
       Role: profile.Role || "Staff",
       Email: profile.Email || "",
@@ -45,12 +47,39 @@ export const UpdateUserSettings = asyncHandler(async (req, res) => {
   const img=req.file?.filename;
   if (!userId) return res.status(401).json({ success: false, message: "Unauthorized." });
 
-  const { Email, Notifications, LowStockThreshold, Theme, Language, Units } = req.body;
+  const { FirstName, LastName, Username, Email, Notifications, LowStockThreshold, Theme, Language, Units } = req.body;
   const user = await User.findById(userId).populate("UserProfile").exec();
   if (!user) return notFound(res, "User");
   const profile = user.UserProfile;
   if (!profile) {
     return res.status(500).json({ success: false, message: "User profile is missing." });
+  }
+
+  if (FirstName !== undefined) {
+    if (typeof FirstName !== "string" || !FirstName.trim()) {
+      return res.status(400).json({ success: false, message: "First name is required." });
+    }
+    user.FirstName = FirstName.trim();
+    user.FirtsName = FirstName.trim();
+  }
+
+  if (LastName !== undefined) {
+    if (typeof LastName !== "string") {
+      return res.status(400).json({ success: false, message: "Last name must be text." });
+    }
+    user.LastName = LastName.trim();
+  }
+
+  if (Username !== undefined) {
+    if (typeof Username !== "string" || !Username.trim()) {
+      return res.status(400).json({ success: false, message: "Username is required." });
+    }
+    const normalizedUsername = Username.trim();
+    const usernameInUse = await User.exists({ Username: normalizedUsername, _id: { $ne: userId } });
+    if (usernameInUse) {
+      return res.status(409).json({ success: false, message: "That username is already in use." });
+    }
+    user.Username = normalizedUsername;
   }
 
   if (Email !== undefined) {
@@ -109,13 +138,15 @@ export const UpdateUserSettings = asyncHandler(async (req, res) => {
     user.UserProfile.img=img
   }
 
-  await profile.save();
+  await Promise.all([profile.save(), user.save()]);
 
   res.status(200).json({
     success: true,
     message: "Settings updated successfully.",
     user: {
       id: user._id,
+      FirstName: user.FirstName || user.FirtsName || "",
+      LastName: user.LastName || "",
       Username: user.Username,
       Role: profile.Role,
       Email: profile.Email,

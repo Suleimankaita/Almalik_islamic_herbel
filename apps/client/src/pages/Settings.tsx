@@ -16,6 +16,8 @@
       ChevronDown,
       X,
       Check,
+      Eye,
+      EyeOff,
       } from 'lucide-react';
       import {
       useGetUserSettingsQuery,
@@ -116,7 +118,6 @@
       useOnClickOutside(dropdownRef, () => {
       if (isOpen && onToggleDropdown) onToggleDropdown();
       });
-
       const handleClick = () => {
       if (isDropdown && onToggleDropdown) {
       onToggleDropdown();
@@ -198,6 +199,9 @@
       export default function SettingsPage() {
       // State Management
       const [mounted, setMounted] = useState(false);
+      const [firstName, setFirstName] = useState('');
+      const [lastName, setLastName] = useState('');
+      const [username, setUsername] = useState('');
       const [email, setEmail] = useState('info@almalikherbel.com');
       const [notifications, setNotifications] = useState(true);
       const [lowStockThreshold, setLowStockThreshold] = useState('5');
@@ -225,6 +229,7 @@
 
       const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
       const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+      const [showPassword, setShowPassword] = useState(false);
 
       const { data: settingsData, isLoading: isLoadingSettings, isFetching: isFetchingSettings } = useGetUserSettingsQuery({token},{ 
       pollingInterval:1000
@@ -241,6 +246,9 @@
 
       useEffect(() => {
       if (settingsData?.success && settingsData.user) {
+      setFirstName(settingsData.user.FirstName || '');
+      setLastName(settingsData.user.LastName || '');
+      setUsername(settingsData.user.Username || '');
       setEmail(settingsData.user.Email || '');
       setProfileImage(settingsData?.user?.Img?.length ? `${import.meta.env.VITE_URI}/img/${settingsData?.user?.Img}` : null);
       setNotifications(settingsData.user.Notifications ?? true);
@@ -480,9 +488,70 @@
       <SettingItem
       icon={User}
       title="Profile Information"
-      description="View and update your personal details"
+      description="Update your name and username"
       delay={150}
-      onClick={() => photoInputRef.current?.click()}
+      />
+      <div className="mx-4 h-px bg-gray-100 transition-colors" />
+      <SettingItem
+      icon={User}
+      title="First name"
+      description="Update your first name"
+      value={firstName || 'Not set'}
+      delay={175}
+      onClick={() => setEditModal({
+      isOpen: true,
+      title: 'Update First Name',
+      type: 'text',
+      value: firstName,
+      onSave: async (val) => {
+      if (!val.trim()) {
+      showToast('First name is required');
+      return;
+      }
+      await saveSettings({ FirstName: val }, 'First name updated');
+      setFirstName(val.trim());
+      },
+      })}
+      />
+      <div className="mx-4 h-px bg-gray-100 transition-colors" />
+      <SettingItem
+      icon={User}
+      title="Last name"
+      description="Update your last name"
+      value={lastName || 'Not set'}
+      delay={185}
+      onClick={() => setEditModal({
+      isOpen: true,
+      title: 'Update Last Name',
+      type: 'text',
+      value: lastName,
+      onSave: async (val) => {
+      await saveSettings({ LastName: val }, 'Last name updated');
+      setLastName(val.trim());
+      },
+      })}
+      />
+      <div className="mx-4 h-px bg-gray-100 transition-colors" />
+      <SettingItem
+      icon={User}
+      title="Username"
+      description="Update your sign-in username"
+      value={username}
+      delay={195}
+      onClick={() => setEditModal({
+      isOpen: true,
+      title: 'Update Username',
+      type: 'text',
+      value: username,
+      onSave: async (val) => {
+      if (!val.trim()) {
+      showToast('Username is required');
+      return;
+      }
+      await saveSettings({ Username: val }, 'Username updated');
+      setUsername(val.trim());
+      },
+      })}
       />
       <div className="mx-4 h-px bg-gray-100 transition-colors" />
       <SettingItem
@@ -501,8 +570,8 @@
       showToast('Email is required');
       return;
       }
-      setEmail(val);
       await saveSettings({ Email: val }, 'Email successfully updated');
+      setEmail(val);
       },
       })}
       />
@@ -513,7 +582,9 @@
       description="Change your password"
       value="********"
       delay={250}
-      onClick={() => setEditModal({
+      onClick={() => {
+      setShowPassword(false);
+      setEditModal({
       isOpen: true,
       title: 'Update Password',
       type: 'password',
@@ -525,7 +596,8 @@
       }
       await handlePasswordChange(val);
       },
-      })}
+      });
+      }}
       />
       </div>
       </section>
@@ -605,9 +677,10 @@
       isOpen={activeDropdown === 'language'}
       onToggleDropdown={() => toggleDropdown('language')}
       onOptionSelect={(val) => {
-      setLanguage(val);
       setActiveDropdown(null);
-      showToast(`Language set to ${val}`);
+      void saveSettings({ Language: val }, `Language set to ${val}`)
+      .then(() => setLanguage(val))
+      .catch(() => {});
       }}
       delay={350}
       />
@@ -621,9 +694,10 @@
       isOpen={activeDropdown === 'units'}
       onToggleDropdown={() => toggleDropdown('units')}
       onOptionSelect={(val) => {
-      setUnits(val);
       setActiveDropdown(null);
-      showToast(`Units updated to ${val.split(' ')[0]}`);
+      void saveSettings({ Units: val }, `Units updated to ${val.split(' ')[0]}`)
+      .then(() => setUnits(val))
+      .catch(() => {});
       }}
       delay={400}
       />
@@ -682,11 +756,12 @@
       <X size={20} />
       </button>
       </div>
+      <div className="relative mb-6">
       <input
-      type={editModal.type}
+      type={editModal.type === 'password' && showPassword ? 'text' : editModal.type}
       autoFocus
       defaultValue={editModal.value}
-      className="w-full rounded-xl border border-gray-300 bg-gray-50 px-4 py-3 text-gray-900 focus:border-[#2C5234] focus:outline-none focus:ring-1 focus:ring-[#2C5234] transition-colors mb-6"
+      className={`w-full rounded-xl border border-gray-300 bg-gray-50 px-4 py-3 text-gray-900 focus:border-[#2C5234] focus:outline-none focus:ring-1 focus:ring-[#2C5234] transition-colors ${editModal.type === 'password' ? 'pr-12' : ''}`}
       placeholder={`Enter new ${editModal.title.split(' ')[1].toLowerCase()}`}
       onKeyDown={(e) => {
       if (e.key === 'Enter') {
@@ -696,6 +771,17 @@
       }}
       id="modal-input"
       />
+      {editModal.type === 'password' && (
+      <button
+      type="button"
+      aria-label={showPassword ? 'Hide password' : 'Show password'}
+      onClick={() => setShowPassword((visible) => !visible)}
+      className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-gray-500 hover:text-gray-800"
+      >
+      {showPassword ? <EyeOff size={19} /> : <Eye size={19} />}
+      </button>
+      )}
+      </div>
       <div className="flex justify-end gap-3">
       <button
       onClick={() => setEditModal({ ...editModal, isOpen: false })}

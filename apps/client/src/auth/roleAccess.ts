@@ -8,6 +8,8 @@ export const ROLE_ACCESS: Record<AppRole, string[]> = {
     '/inventory/view-products/:id',
     '/sales-pos',
     '/sales-history',
+    '/loans',
+    '/loans/paid',
     '/Sales (POS)',
     '/add product',
     '/customers',
@@ -30,6 +32,8 @@ export const ROLE_ACCESS: Record<AppRole, string[]> = {
     '/inventory/view-products/:id',
     '/sales-pos',
     '/sales-history',
+    '/loans',
+    '/loans/paid',
     '/Sales (POS)',
     '/add product',
     '/customers',
@@ -41,7 +45,7 @@ export const ROLE_ACCESS: Record<AppRole, string[]> = {
     '/purchase',
     '/messages',
   ],
-  Staff: ['/', '/search', '/sales-pos', '/sales-history', '/Sales (POS)', '/notifications', '/settings', '/messages'],
+  Staff: ['/', '/search', '/sales-pos', '/sales-history', '/loans', '/loans/paid', '/Sales (POS)', '/notifications', '/settings', '/messages'],
 };
 
 export const normalizeRole = (role: unknown): AppRole =>

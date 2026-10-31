@@ -270,6 +270,43 @@ const DataSlice = ApiSlice.injectEndpoints({
                 { type: "Sales" as const, id: "LIST" },
             ]
         }),
+        GetLoans: builder.query({
+            query: () => ({
+                url: '/api/loans',
+                method: 'GET',
+            }),
+            providesTags: [{ type: 'Loans' as const, id: 'LIST' }],
+        }),
+        CreateLoan: builder.mutation({
+            query: (body: {
+                customerName: string;
+                phone: string;
+                details?: string;
+                type: 'product' | 'money';
+                productId?: string;
+                quantity?: number;
+                items?: { id: string; quantity: number }[];
+                amount?: number;
+                collectedDate: string;
+                dueDate: string;
+            }) => ({
+                url: '/api/loans',
+                method: 'POST',
+                body,
+            }),
+            invalidatesTags: [
+                { type: 'Loans' as const, id: 'LIST' },
+                { type: 'Products' as const, id: 'LIST' },
+            ],
+        }),
+        UpdateLoanPayment: builder.mutation({
+            query: ({ id, paidDate }: { id: string; paidDate: string }) => ({
+                url: `/api/loans/${id}/payment`,
+                method: 'PATCH',
+                body: { paidDate },
+            }),
+            invalidatesTags: [{ type: 'Loans' as const, id: 'LIST' }],
+        }),
         DeleteProduct: builder.mutation({
             query:({token,id}:{token?: string; id:string})=>{
                 const headers: Record<string, string> = {};
@@ -344,6 +381,9 @@ export const {
     useCreateProductMutation,
     useSetProductStatusMutation,
     useCreateSaleMutation,
+    useGetLoansQuery,
+    useCreateLoanMutation,
+    useUpdateLoanPaymentMutation,
     useGetTransactionsQuery,
     useGetTopSalesQuery,
     useGetAllUserQuery,

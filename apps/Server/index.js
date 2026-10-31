@@ -20,6 +20,7 @@ import UserSettings from "./Routes/UserSettings.js";
 import fsp from "fs/promises"
 import Refresh from "./Routes/Refresh.js"
 import Logout from "./Routes/logout.js"
+import Loans from "./Routes/Loans.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
@@ -100,6 +101,8 @@ app.use(AdminRegistration)
  app.use("/api", GetAllUser);
 
  app.use("/api", Sales);
+
+ app.use("/api", Loans);
  
  app.use("/api", UserSales);
 

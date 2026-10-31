@@ -3,6 +3,8 @@ import { useSelector } from 'react-redux';
 import { DateRange, Range, RangeKeyDict } from 'react-date-range';
 import { format, startOfDay, endOfDay, isSameDay, differenceInCalendarDays } from 'date-fns';
 import { Calendar as CalendarIcon, ChevronDown, X, RefreshCw } from 'lucide-react';
+import { AlertTriangle, HandCoins } from 'lucide-react';
+import { Link } from 'react-router-dom';
 
 // CSS styles required by react-date-range
 import 'react-date-range/dist/styles.css';
@@ -17,7 +19,7 @@ import TopSellingProducts from './components/TopSellingProducts';
 import ExpiringSoon from './components/ExpiringSoon';
 import QuoteBanner from './components/QuoteBanner';
 import { statCards as defaultStatCards, miniStats as defaultMiniStats } from './data';
-import { useGetAllProductsQuery, useGetTopSalesQuery, useGetTransactionsQuery } from './Features/api/DataSlice';
+import { useGetAllProductsQuery, useGetLoansQuery, useGetTopSalesQuery, useGetTransactionsQuery } from './Features/api/DataSlice';
 import { GetToken, GetUserDetails } from './Features/AppSlice';
 
 interface Transaction {
@@ -48,6 +50,12 @@ interface Product {
   ExpiryDate?: string;
 }
 
+interface DashboardLoan {
+  Amount: number;
+  DueDate?: string;
+  PaidDate?: string;
+}
+
 const EXPIRY_WINDOW_DAYS = 30;
 
 export default function App() {
@@ -60,6 +68,20 @@ export default function App() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [isAllSales, setIsAllSales] = useState(false);
   const datePickerRef = useRef<HTMLDivElement>(null);
+  const { data: loansResponse } = useGetLoansQuery(undefined, {
+    skip: !token,
+    pollingInterval: 60000,
+    refetchOnFocus: true,
+  });
+  const loans: DashboardLoan[] = loansResponse?.loans ?? [];
+  const totalLoaned = loans.reduce((sum, loan) => sum + Number(loan.Amount || 0), 0);
+  const outstandingLoans = loans.filter((loan) => !loan.PaidDate);
+  const outstandingLoanAmount = outstandingLoans.reduce((sum, loan) => sum + Number(loan.Amount || 0), 0);
+  const paidLoanAmount = loans
+    .filter((loan) => Boolean(loan.PaidDate))
+    .reduce((sum, loan) => sum + Number(loan.Amount || 0), 0);
+  const currentDate = format(new Date(), 'yyyy-MM-dd');
+  const dueLoanCount = outstandingLoans.filter((loan) => loan.DueDate && loan.DueDate <= currentDate).length;
 
   // Date Range State
   const [dateRange, setDateRange] = useState<Range[]>([
@@ -522,6 +544,35 @@ export default function App() {
           )}
 
           {/* Stat Cards Row */}
+          <section aria-label="Loan overview" className="space-y-3">
+            {dueLoanCount > 0 && (
+              <Link to="/loans" className="flex items-center justify-between gap-3 rounded-xl border border-amber-300 bg-amber-50 p-4 text-amber-950 hover:bg-amber-100">
+                <span className="flex items-center gap-2 text-sm font-semibold">
+                  <AlertTriangle size={18} />
+                  {dueLoanCount} loan payment{dueLoanCount === 1 ? '' : 's'} due or overdue
+                </span>
+                <span className="text-sm font-bold">Review loans</span>
+              </Link>
+            )}
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Link to="/loans" className="rounded-xl border border-emerald-100 bg-white p-4 shadow-sm transition hover:border-emerald-300 hover:shadow">
+                <p className="flex items-center gap-2 text-sm text-gray-500"><HandCoins size={16} /> Total loans issued</p>
+                <p className="mt-1 text-xl font-bold text-gray-900">₦{totalLoaned.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="mt-1 text-xs text-gray-500">{loans.length} loan record(s)</p>
+              </Link>
+              <Link to="/loans" className="rounded-xl border border-amber-100 bg-white p-4 shadow-sm transition hover:border-amber-300 hover:shadow">
+                <p className="text-sm text-gray-500">Outstanding loan balance</p>
+                <p className="mt-1 text-xl font-bold text-amber-800">₦{outstandingLoanAmount.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="mt-1 text-xs text-gray-500">{outstandingLoans.length} unpaid loan(s)</p>
+              </Link>
+              <Link to="/loans/paid" className="rounded-xl border border-green-100 bg-white p-4 shadow-sm transition hover:border-green-300 hover:shadow">
+                <p className="text-sm text-gray-500">Loans repaid</p>
+                <p className="mt-1 text-xl font-bold text-green-800">₦{paidLoanAmount.toLocaleString('en-NG', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                <p className="mt-1 text-xs text-gray-500">View paid loan history</p>
+              </Link>
+            </div>
+          </section>
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
             {updatedStatCards.map((card) => (
               <StatCard key={card.id} data={card} />

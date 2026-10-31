@@ -7,7 +7,7 @@ import {
   Filter, Clock, ArrowRight
 } from 'lucide-react';
 import { GetToken } from '../Features/AppSlice';
-import { useGetLowStockProductsQuery } from '../Features/api/DataSlice';
+import { useGetLoansQuery, useGetLowStockProductsQuery } from '../Features/api/DataSlice';
 
 // --- Types & Initial Data ---
 type NotifType = 'order' | 'inventory' | 'system' | 'alert';
@@ -28,18 +28,44 @@ interface Notification {
   link?: string;
 }
 
+interface LoanAlert {
+  _id: string;
+  CustomerName: string;
+  Phone?: string;
+  ItemName?: string;
+  Amount: number;
+  DueDate?: string;
+  PaidDate?: string;
+}
+
+const localDate = () => {
+  const date = new Date();
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
+const dateAfterDays = (days: number) => {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+};
+
 export default function NotificationCenter() {
   const token = useSelector(GetToken);
   const { data, isLoading, isError } = useGetLowStockProductsQuery(
     undefined,
     { skip: !token, pollingInterval: 30000, refetchOnFocus: true },
   );
+  const { data: loansResponse, isLoading: isLoadingLoans, isError: isLoansError } = useGetLoansQuery(
+    undefined,
+    { skip: !token, pollingInterval: 60000, refetchOnFocus: true },
+  );
+  const isNotificationsLoading = isLoading || isLoadingLoans;
+  const isNotificationsError = isError || isLoansError;
   const [readNotificationIds, setReadNotificationIds] = useState<string[]>([]);
   const [dismissedNotificationIds, setDismissedNotificationIds] = useState<string[]>([]);
-  const [activeFilter, setActiveFilter] = useState<'all' | 'unread' | 'order' | 'inventory' | 'system'>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'unread' | 'order' | 'inventory' | 'system' | 'alert'>('all');
   const notifications = useMemo<Notification[]>(() => {
     const products: LowStockProduct[] = Array.isArray(data?.products) ? data.products : [];
-    return products
+    const inventoryNotifications: Notification[] = products
       .map((product) => {
         const id = `low-stock-${product._id}`;
         return {
@@ -53,7 +79,28 @@ export default function NotificationCenter() {
         };
       })
       .filter((notification) => !dismissedNotificationIds.includes(notification.id));
-  }, [data, dismissedNotificationIds, readNotificationIds]);
+    const loans: LoanAlert[] = Array.isArray(loansResponse?.loans) ? loansResponse.loans : [];
+    const today = localDate();
+    const dueSoonLimit = dateAfterDays(7);
+    const loanNotifications: Notification[] = loans
+      .filter((loan) => !loan.PaidDate && loan.DueDate && loan.DueDate <= dueSoonLimit)
+      .map((loan) => {
+        const daysLate = Math.max(0, Math.floor((new Date(`${today}T00:00:00`).getTime() - new Date(`${loan.DueDate}T00:00:00`).getTime()) / 86400000));
+        const isOverdue = loan.DueDate! < today;
+        const id = `loan-due-${loan._id}`;
+        return {
+          id,
+          type: 'alert' as const,
+          title: isOverdue ? 'Loan payment overdue' : loan.DueDate === today ? 'Loan payment due today' : 'Loan payment due soon',
+          message: `${loan.CustomerName}${loan.Phone ? ` (${loan.Phone})` : ''} owes ₦${Number(loan.Amount || 0).toLocaleString('en-NG')}${loan.ItemName ? ` for ${loan.ItemName}` : ''}${isOverdue ? ` — overdue by ${daysLate} day(s)` : ` — due ${loan.DueDate}`}.`,
+          timestamp: isOverdue ? `${daysLate} day(s) overdue` : loan.DueDate!,
+          isRead: readNotificationIds.includes(id),
+          link: '/loans',
+        };
+      })
+      .filter((notification) => !dismissedNotificationIds.includes(notification.id));
+    return [...loanNotifications, ...inventoryNotifications];
+  }, [data, loansResponse, dismissedNotificationIds, readNotificationIds]);
 
   // --- Active Functionalities ---
   
@@ -143,6 +190,7 @@ export default function NotificationCenter() {
               { id: 'unread', label: 'Unread', icon: Clock },
               { id: 'order', label: 'Orders & Sales', icon: ShoppingBag },
               { id: 'inventory', label: 'Inventory Alerts', icon: PackageX },
+              { id: 'alert', label: 'Loan Payments', icon: ShieldAlert },
               { id: 'system', label: 'System Updates', icon: Sparkles },
             ].map((nav) => (
               <button
@@ -196,13 +244,13 @@ export default function NotificationCenter() {
 
           {/* Notification List */}
           <div className="space-y-3">
-            {isError ? (
+            {isNotificationsError ? (
               <div role="alert" className="rounded-3xl border border-red-200 bg-red-50 p-6 text-sm font-medium text-red-700">
-                Low-stock notifications could not be loaded. Please try again later.
+                Notifications could not be fully loaded. Please check the connection and try again.
               </div>
-            ) : isLoading ? (
+            ) : isNotificationsLoading ? (
               <div role="status" className="rounded-3xl border border-slate-200 bg-white p-8 text-center text-sm font-medium text-slate-500">
-                Loading low-stock notifications...
+                Loading notifications...
               </div>
             ) : filteredNotifications.length === 0 ? (
               // Empty State
