@@ -1,4 +1,3 @@
-
 import Logo from '../assets/Logo.png';
 
 export interface PrintableSaleItem {
@@ -8,7 +7,6 @@ export interface PrintableSaleItem {
   price: number;
   quantity: number;
 }
-// sshh
 
 interface ReceiptOptions {
   paymentMethod?: string;
@@ -26,7 +24,27 @@ const STORE = {
   email: 'Abdullahiabba157@gmail.com',
 };
 
-let receiptCounter = 0;
+/**
+ * HOW THIS WORKS
+ * The receipt is drawn onto a canvas that is exactly as wide as the printer
+ * (384 dots = 48mm at 203 dpi), converted to pure black/white, and printed as
+ * one image. The browser and driver then have nothing to re-render or rescale,
+ * so text comes out exactly as drawn.
+ *
+ * Tuning (all in printer dots, 8 dots = 1mm):
+ */
+const DOTS_WIDTH = 384; // 58mm printers: 384. (80mm printers: 576)
+const PAPER_MM = 58;
+const PRINTABLE_MM = 48; // DOTS_WIDTH / 8
+const SIDE_PAD = 6; // keeps text away from unreliable edge dots
+const FEED_BOTTOM = 56; // blank space at the end so the tear bar doesn't cut text
+const THRESHOLD = 170; // higher = bolder/blacker, lower = thinner
+const FONT = 'Arial, Helvetica, sans-serif';
+const MONO = '"Courier New", Courier, monospace';
+
+const SIZE = { small: 20, body: 22, title: 26, store: 30, total: 28 };
+
+const COUNTER_KEY = 'al-malik:receipt-counter';
 
 /** Use printer-friendly currency characters. */
 export const formatCurrency = (amount: number): string =>
@@ -35,26 +53,8 @@ export const formatCurrency = (amount: number): string =>
     maximumFractionDigits: 2,
   })}`;
 
-const escapeHtml = (value: string | number): string =>
-  String(value)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
-
-const generateReceiptNo = (): string => {
-  const now = new Date();
-  receiptCounter += 1;
-
-  const date = [
-    now.getFullYear(),
-    String(now.getMonth() + 1).padStart(2, '0'),
-    String(now.getDate()).padStart(2, '0'),
-  ].join('');
-
-  return `AM-${date}-${String(receiptCounter).padStart(4, '0')}`;
-};
+export const openReceiptWindow = (): Window | null =>
+  window.open('', '_blank', 'width=400,height=700');
 
 const localDate = (date: Date): string =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -66,9 +66,300 @@ const localTime = (date: Date): string =>
     hour12: true,
   });
 
+/** Counter survives page reloads (resets each day) so receipt numbers don't repeat. */
+const generateReceiptNo = (): string => {
+  const now = new Date();
+  const day = localDate(now);
+  let n = 1;
+
+  try {
+    const saved = JSON.parse(localStorage.getItem(COUNTER_KEY) || 'null');
+    if (saved && saved.day === day && Number.isFinite(saved.n)) {
+      n = saved.n + 1;
+    }
+    localStorage.setItem(COUNTER_KEY, JSON.stringify({ day, n }));
+  } catch {
+    n = Math.floor(now.getTime() / 1000) % 10000;
+  }
+
+  return `AM-${day.replace(/-/g, '')}-${String(n).padStart(4, '0')}`;
+};
+
+interface ReceiptData {
+  items: PrintableSaleItem[];
+  receiptNo: string;
+  date: string;
+  time: string;
+  payment: string;
+  cashier: string;
+  totalUnits: number;
+  total: number;
+}
+
+const loadImage = (src: string): Promise<HTMLImageElement | null> =>
+  new Promise((resolve) => {
+    const img = new Image();
+    const timer = window.setTimeout(() => resolve(null), 2000);
+    img.onload = () => {
+      window.clearTimeout(timer);
+      resolve(img);
+    };
+    img.onerror = () => {
+      window.clearTimeout(timer);
+      resolve(null);
+    };
+    img.src = src;
+  });
+
+/** Break text into lines that fit maxWidth (also splits very long words). */
+const wrapText = (
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  maxWidth: number,
+): string[] => {
+  const lines: string[] = [];
+
+  for (const paragraph of String(text).split('\n')) {
+    let line = '';
+
+    for (const word of paragraph.split(/\s+/).filter(Boolean)) {
+      const test = line ? `${line} ${word}` : word;
+
+      if (ctx.measureText(test).width <= maxWidth) {
+        line = test;
+        continue;
+      }
+
+      if (line) lines.push(line);
+      line = '';
+
+      // Word longer than a full line: split by characters.
+      let chunk = '';
+      for (const ch of word) {
+        if (ctx.measureText(chunk + ch).width > maxWidth && chunk) {
+          lines.push(chunk);
+          chunk = ch;
+        } else {
+          chunk += ch;
+        }
+      }
+      line = chunk;
+    }
+
+    lines.push(line);
+  }
+
+  return lines;
+};
+
+/**
+ * Lay out (draw=false) or paint (draw=true) the whole receipt.
+ * Returns the total height used. Run once to measure, once to paint.
+ */
+const layoutReceipt = (
+  ctx: CanvasRenderingContext2D,
+  data: ReceiptData,
+  logo: HTMLImageElement | null,
+  draw: boolean,
+): number => {
+  const W = DOTS_WIDTH;
+  const left = SIDE_PAD;
+  const right = W - SIDE_PAD;
+  const contentW = right - left;
+  let y = 8;
+
+  ctx.textBaseline = 'top';
+  ctx.fillStyle = '#000';
+
+  const setFont = (size: number, family = FONT) => {
+    ctx.font = `bold ${size}px ${family}`;
+  };
+
+  const gap = (px: number) => {
+    y += px;
+  };
+
+  const rule = (thickness: number, dashed = false) => {
+    if (draw) {
+      if (!dashed) {
+        ctx.fillRect(left, y, contentW, thickness);
+      } else {
+        for (let x = left; x < right; x += 8) {
+          ctx.fillRect(x, y, Math.min(4, right - x), thickness);
+        }
+      }
+    }
+    y += thickness;
+  };
+
+  const text = (
+    value: string,
+    size: number,
+    align: 'left' | 'center' = 'left',
+    family = FONT,
+  ) => {
+    setFont(size, family);
+    const lineH = Math.round(size * 1.25);
+
+    for (const line of wrapText(ctx, value, contentW)) {
+      if (draw) {
+        if (align === 'center') {
+          ctx.fillText(line, Math.round(W / 2 - ctx.measureText(line).width / 2), y);
+        } else {
+          ctx.fillText(line, left, y);
+        }
+      }
+      y += lineH;
+    }
+  };
+
+  /** Left text and right-aligned amount on the same line. */
+  const row = (leftText: string, rightText: string, size: number) => {
+    setFont(size);
+    const lineH = Math.round(size * 1.25);
+    const rightW = Math.ceil(ctx.measureText(rightText).width);
+    const lines = wrapText(ctx, leftText, Math.max(40, contentW - rightW - 10));
+
+    lines.forEach((line, i) => {
+      if (draw) {
+        ctx.fillText(line, left, y);
+        if (i === 0) ctx.fillText(rightText, right - rightW, y);
+      }
+      y += lineH;
+    });
+  };
+
+  // ---- Header ----
+  if (logo && logo.naturalWidth > 0) {
+    const logoW = 150;
+    const logoH = Math.round((logo.naturalHeight / logo.naturalWidth) * logoW);
+    if (draw) {
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(Math.round((W - logoW) / 2), y, logoW, logoH);
+      ctx.drawImage(logo, Math.round((W - logoW) / 2), y, logoW, logoH);
+      ctx.fillStyle = '#000';
+    }
+    y += logoH + 8;
+  }
+
+  text(STORE.name, SIZE.store, 'center');
+  gap(2);
+  text(STORE.tagline, SIZE.small, 'center');
+  gap(4);
+  text(STORE.address, SIZE.small, 'center');
+  text(`Tel: ${STORE.phone}`, SIZE.small, 'center');
+  text(STORE.email, SIZE.small, 'center');
+
+  gap(8);
+  rule(3);
+  gap(8);
+  text('SALES RECEIPT', SIZE.title, 'center');
+  gap(8);
+
+  // ---- Details ----
+  row('Receipt No.', data.receiptNo, SIZE.body);
+  gap(4);
+  row('Date', data.date, SIZE.body);
+  gap(4);
+  row('Time', data.time, SIZE.body);
+  gap(4);
+  row('Payment', data.payment, SIZE.body);
+  gap(4);
+  row('Cashier', data.cashier, SIZE.body);
+
+  gap(8);
+  rule(3);
+  gap(8);
+
+  // ---- Items ----
+  text('ITEMS PURCHASED', SIZE.body);
+  gap(6);
+
+  for (const item of data.items) {
+    text(item.name, SIZE.body);
+    if (item.variant) text(`Code: ${item.variant}`, SIZE.small);
+    gap(2);
+    row(
+      `${item.quantity} x ${formatCurrency(item.price)}`,
+      formatCurrency(item.price * item.quantity),
+      SIZE.body,
+    );
+    gap(6);
+    rule(1, true);
+    gap(6);
+  }
+
+  // ---- Totals ----
+  gap(4);
+  row('Total items', String(data.totalUnits), SIZE.body);
+  gap(4);
+  row('Subtotal', formatCurrency(data.total), SIZE.body);
+  gap(8);
+  rule(3);
+  gap(6);
+  row('TOTAL', formatCurrency(data.total), SIZE.total);
+  gap(6);
+  rule(3);
+
+  // ---- Footer ----
+  gap(12);
+  text(data.receiptNo, SIZE.small, 'center', MONO);
+  gap(6);
+  text('Thank you for shopping with us!', SIZE.body, 'center');
+  gap(4);
+  text('Please retain your receipt for your records.', SIZE.small, 'center');
+  gap(2);
+  text('Halal & Sunnah-Based Wellness', SIZE.small, 'center');
+
+  return y;
+};
+
+/** Convert anti-aliased greys to pure black/white so nothing gets dithered. */
+const toBlackAndWhite = (ctx: CanvasRenderingContext2D, w: number, h: number) => {
+  const image = ctx.getImageData(0, 0, w, h);
+  const px = image.data;
+
+  for (let i = 0; i < px.length; i += 4) {
+    const lum = px[i] * 0.299 + px[i + 1] * 0.587 + px[i + 2] * 0.114;
+    const v = lum < THRESHOLD ? 0 : 255;
+    px[i] = px[i + 1] = px[i + 2] = v;
+    px[i + 3] = 255;
+  }
+
+  ctx.putImageData(image, 0, 0);
+};
+
+const renderReceiptBitmap = async (data: ReceiptData): Promise<string> => {
+  const logo = await loadImage(Logo);
+
+  // Pass 1: measure the height.
+  const scratch = document.createElement('canvas');
+  scratch.width = DOTS_WIDTH;
+  scratch.height = 10;
+  const measureCtx = scratch.getContext('2d');
+  if (!measureCtx) throw new Error('Canvas not supported');
+  const height = layoutReceipt(measureCtx, data, logo, false) + FEED_BOTTOM;
+
+  // Pass 2: paint.
+  const canvas = document.createElement('canvas');
+  canvas.width = DOTS_WIDTH;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  if (!ctx) throw new Error('Canvas not supported');
+
+  ctx.fillStyle = '#fff';
+  ctx.fillRect(0, 0, DOTS_WIDTH, height);
+  ctx.fillStyle = '#000';
+  layoutReceipt(ctx, data, logo, true);
+  toBlackAndWhite(ctx, DOTS_WIDTH, height);
+
+  return canvas.toDataURL('image/png');
+};
+
 export function printSalesReceipt(
   items: PrintableSaleItem[],
   options: ReceiptOptions = {},
+  reservedWindow?: Window | null,
 ): boolean {
   if (!items.length) return false;
 
@@ -84,57 +375,33 @@ export function printSalesReceipt(
     }
   }
 
+  // Open synchronously inside the click, or reuse a window reserved there.
+  const printWindow = reservedWindow === undefined ? openReceiptWindow() : reservedWindow;
+  if (!printWindow || printWindow.closed) return false;
+
   const now = new Date();
-  const receiptNo = options.receiptNo || generateReceiptNo();
-  const date = options.date || localDate(now);
-  const time = options.time || localTime(now);
-  const payment = options.paymentMethod || 'Cash';
-  const cashier = options.cashier || 'POS Terminal 1';
 
-  const totalUnits = items.reduce(
-    (sum, item) => sum + item.quantity,
-    0,
-  );
+  const data: ReceiptData = {
+    items,
+    receiptNo: options.receiptNo || generateReceiptNo(),
+    date: options.date || localDate(now),
+    time: options.time || localTime(now),
+    payment: options.paymentMethod || 'Cash',
+    cashier: options.cashier || 'POS Terminal 1',
+    totalUnits: items.reduce((sum, item) => sum + item.quantity, 0),
+    total: items.reduce((sum, item) => sum + item.price * item.quantity, 0),
+  };
 
-  const total = items.reduce(
-    (sum, item) => sum + item.price * item.quantity,
-    0,
-  );
+  renderReceiptBitmap(data)
+    .then((dataUrl) => {
+      if (printWindow.closed) return;
 
-  const itemHtml = items
-    .map((item) => {
-      const name = escapeHtml(item.name);
-      const variant = item.variant
-        ? `<div class="variant">Code: ${escapeHtml(item.variant)}</div>`
-        : '';
-
-      return `
-        <div class="item">
-          <div class="item-name">${name}</div>
-
-          ${variant}
-
-          <div class="item-line">
-            <span class="item-quantity">
-              ${item.quantity} x ${escapeHtml(formatCurrency(item.price))}
-            </span>
-
-            <span class="item-price">
-              ${escapeHtml(formatCurrency(item.price * item.quantity))}
-            </span>
-          </div>
-        </div>
-      `;
-    })
-    .join('');
-
-  const html = `<!DOCTYPE html>
+      printWindow.document.open();
+      printWindow.document.write(`<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Receipt ${escapeHtml(receiptNo)}</title>
-
+  <title>Receipt ${data.receiptNo.replace(/[<>&"]/g, '')}</title>
   <style>
     /* PT280: 58mm paper roll, approximately 48mm printable width. */
     @page {
@@ -148,7 +415,7 @@ export function printSalesReceipt(
 
     html,
     body {
-      width: 100%;
+      width: 58mm;
       min-width: 0;
       margin: 0;
       padding: 0;
@@ -158,6 +425,7 @@ export function printSalesReceipt(
 
     body {
       font-family: Arial, Helvetica, sans-serif;
+      font-size: 10.5pt;
       line-height: 1.35;
       font-weight: 600;
       color: #000;
@@ -182,48 +450,36 @@ export function printSalesReceipt(
 
     .logo {
       display: block;
-      width: 35px;
-      height: 35px;
-      object-fit: cover;
+      width: 26px;
+      height: 26px;
+      object-fit: contain;
       margin: 0 auto 2mm;
     }
 
     .store-name {
       margin: 0;
-      font-size: 8px;
-      line-height: 1.3;
-      font-weight: 1000;
-    }
-
-    .tagline {
-      margin: 1mm 0;
-      font-size: 9px;
-      font-weight: 1000;
-      font-size: 8px;
+      font-size: 12pt;
       line-height: 1.25;
       font-weight: 700;
     }
 
     .tagline {
       margin: 1.5mm 0;
-     font-size: 12pt;
-      font-weight: 700;
+      font-size: 9pt;
+      font-weight: 600;
     }
 
     .contact {
       margin: 1.5mm 0 0;
-      font-size: 6px;
-      line-height: 1.5;
+      font-size: 9.5pt;
       line-height: 1.4;
-      font-size: 8pt;
-      font-weight: 700;
       overflow-wrap: anywhere;
     }
 
     .receipt-title {
       margin: 3mm 0;
       text-align: center;
-      font-size: 8px;
+      font-size: 12pt;
       font-weight: 700;
       letter-spacing: 0;
     }
@@ -239,9 +495,6 @@ export function printSalesReceipt(
       justify-content: space-between;
       align-items: flex-start;
       gap: 2mm;
-      margin: 0 0 1.5mm;
-      font-weight:500;
-      font-size: 10px;
       width: 100%;
     }
 
@@ -291,8 +544,6 @@ export function printSalesReceipt(
 
     .variant {
       margin-top: 1mm;
-      font-weight:1000;
-      font-size: 8px;
       font-size: 9.5pt;
       overflow-wrap: anywhere;
     }
@@ -305,8 +556,6 @@ export function printSalesReceipt(
     .item-quantity {
       flex: 1 1 auto;
       min-width: 0;
-      font-size: 8.5px;
-      font-weight:1000;
       overflow-wrap: anywhere;
     }
 
@@ -324,13 +573,8 @@ export function printSalesReceipt(
     }
 
     .total-row {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 2mm;
-      padding: 1mm 0;
-      font-size:8px;
       padding: 1.2mm 0;
+      font-size: 10pt;
     }
 
     .total-value {
@@ -341,11 +585,9 @@ export function printSalesReceipt(
     .grand-total {
       margin-top: 1.5mm;
       padding: 2mm 0;
-      border-top: 1px solid #000;
-      border-bottom: 1px solid #000;
-      font-size: 10px;
       border-top: 0.3mm solid #000;
       border-bottom: 0.3mm solid #000;
+      font-size: 12pt;
       font-weight: 700;
     }
 
@@ -354,21 +596,19 @@ export function printSalesReceipt(
       padding-top: 2mm;
       border-top: 0.25mm solid #000;
       text-align: center;
-      font-weight:700;
     }
 
     .receipt-number {
       margin: 0 0 2mm;
-      font-family: monospace;
-      font-size: 9px;
       font-family: "Courier New", monospace;
+      font-size: 9pt;
       font-weight: 700;
       overflow-wrap: anywhere;
     }
 
     .thank-you {
       margin: 2mm 0;
-      font-size: 10px;
+      font-size: 10pt;
       font-weight: 700;
     }
 
@@ -414,155 +654,36 @@ export function printSalesReceipt(
     }
   </style>
 </head>
+<body><img id="receipt" alt="Receipt" src="${dataUrl}"></body>
+</html>`);
+      printWindow.document.close();
 
-<body>
-  <main class="receipt">
-    <header class="header">
-      <img class="logo" src="${Logo}" alt="Store logo">
+      // Set after document.open(), which clears earlier handlers.
+      printWindow.onafterprint = () => {
+        if (!printWindow.closed) printWindow.close();
+      };
 
-      <h1 class="store-name">${escapeHtml(STORE.name)}</h1>
+      const img = printWindow.document.getElementById(
+        'receipt',
+      ) as HTMLImageElement | null;
 
-      <p class="tagline">${escapeHtml(STORE.tagline)}</p>
+      const go = () =>
+        printWindow.setTimeout(() => {
+          if (printWindow.closed) return;
+          printWindow.focus();
+          printWindow.print();
+        }, 250);
 
-      <p class="contact">
-        ${escapeHtml(STORE.address)}<br>
-        Tel: ${escapeHtml(STORE.phone)}<br>
-        ${escapeHtml(STORE.email)}
-      </p>
-    </header>
-
-    <h2 class="receipt-title">SALES RECEIPT</h2>
-
-    <section class="details">
-      <div class="detail-row">
-        <span class="detail-label">Receipt No.</span>
-        <span class="detail-value">${escapeHtml(receiptNo)}</span>
-      </div>
-
-      <div class="detail-row">
-        <span class="detail-label">Date</span>
-        <span class="detail-value">${escapeHtml(date)}</span>
-      </div>
-
-      <div class="detail-row">
-        <span class="detail-label">Time</span>
-        <span class="detail-value">${escapeHtml(time)}</span>
-      </div>
-
-      <div class="detail-row">
-        <span class="detail-label">Payment</span>
-        <span class="detail-value">${escapeHtml(payment)}</span>
-      </div>
-
-      <div class="detail-row">
-        <span class="detail-label">Cashier</span>
-        <span class="detail-value">${escapeHtml(cashier)}</span>
-      </div>
-    </section>
-
-    <hr class="divider">
-
-    <section>
-      <h3 class="section-title">ITEMS PURCHASED</h3>
-      ${itemHtml}
-    </section>
-
-    <section class="totals">
-      <div class="total-row">
-        <span>Total items</span>
-        <span class="total-value">${escapeHtml(totalUnits)}</span>
-      </div>
-
-      <div class="total-row">
-        <span>Subtotal</span>
-        <span class="total-value">${escapeHtml(formatCurrency(total))}</span>
-      </div>
-
-      <div class="total-row grand-total">
-        <span>TOTAL</span>
-        <span class="total-value">${escapeHtml(formatCurrency(total))}</span>
-      </div>
-    </section>
-
-    <footer class="footer">
-      <p class="receipt-number">${escapeHtml(receiptNo)}</p>
-
-      <p class="thank-you">Thank you for shopping with us!</p>
-
-      <p class="footer-note">
-        Please retain your receipt for your records.
-      </p>
-
-      <p class="footer-note">
-        Halal &amp; Sunnah-Based Wellness
-      </p>
-    </footer>
-  </main>
-</body>
-</html>`;
-
-  // Open a separate document so application CSS cannot interfere.
-  const printWindow = window.open(
-    '',
-    '_blank',
-    'width=400,height=700',
-  );
-
-  if (!printWindow) {
-    return false;
-  }
-
-  let started = false;
-
-  const startPrint = () => {
-    if (started || printWindow.closed) return;
-    started = true;
-
-    printWindow.focus();
-    printWindow.print();
-  };
-
-  printWindow.onafterprint = () => {
-    if (!printWindow.closed) {
-      printWindow.close();
-    }
-  };
-
-  printWindow.document.open();
-  printWindow.document.write(html);
-  printWindow.document.close();
-
-  const waitForLogo = () => {
-    if (printWindow.closed) return;
-
-    const logo = printWindow.document.querySelector(
-      '.logo',
-    ) as HTMLImageElement | null;
-
-    const printWhenReady = () => {
-      // Give Chromium one frame to finish laying out the receipt.
-      printWindow.setTimeout(startPrint, 350);
-    };
-
-    if (!logo || logo.complete) {
-      printWhenReady();
-      return;
-    }
-
-    logo.addEventListener('load', printWhenReady, { once: true });
-    logo.addEventListener('error', printWhenReady, { once: true });
-
-    // A broken or blocked image must not prevent printing.
-    printWindow.setTimeout(printWhenReady, 2000);
-  };
-
-  if (printWindow.document.readyState === 'complete') {
-    waitForLogo();
-  } else {
-    printWindow.addEventListener('load', waitForLogo, {
-      once: true,
+      if (!img || img.complete) go();
+      else {
+        img.addEventListener('load', go, { once: true });
+        img.addEventListener('error', go, { once: true });
+      }
+    })
+    .catch((error) => {
+      console.error('Receipt render failed:', error);
+      if (!printWindow.closed) printWindow.close();
     });
-  }
 
   return true;
 }

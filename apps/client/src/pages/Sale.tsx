@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import Swal from 'sweetalert2';
 import 'sweetalert2/dist/sweetalert2.min.css';
 import { useSelector } from 'react-redux';
@@ -14,7 +14,7 @@ import {
   Search, User, Plus, Minus, Trash2, CreditCard, Banknote,
   Smartphone, ShoppingCart, Box, X, ChevronRight, RefreshCw, HandCoins
 } from 'lucide-react';
-import { formatCurrency, printSalesReceipt, type PrintableSaleItem } from '../utils/printSalesReceipt';
+import { formatCurrency, openReceiptWindow, printSalesReceipt, type PrintableSaleItem } from '../utils/printSalesReceipt';
 
 // --- Types ---
 type Product = {
@@ -67,6 +67,7 @@ export default function POS() {
   const [lastReceiptItems, setLastReceiptItems] = useState<PrintableSaleItem[] | null>(null);
   const [lastTransactionWasSale, setLastTransactionWasSale] = useState(false);
   const [lastSalePaymentMethod, setLastSalePaymentMethod] = useState('cash');
+  const receiptWindowRef = useRef<Window | null>(null);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerDetails, setCustomerDetails] = useState('');
@@ -164,9 +165,13 @@ export default function POS() {
   const totalDiscount = cart.reduce((acc, item) => acc + item.discount, 0);
   const total = subTotal - totalDiscount;
 
-  const printReceipt = (items: PrintableSaleItem[], methodId = paymentMethod) => {
+  const printReceipt = (
+    items: PrintableSaleItem[],
+    methodId = paymentMethod,
+    reservedWindow?: Window | null,
+  ) => {
     const activeMethod = PAYMENT_METHODS.find((method) => method.id === methodId);
-    if (!printSalesReceipt(items, { paymentMethod: activeMethod?.label })) {
+    if (!printSalesReceipt(items, { paymentMethod: activeMethod?.label }, reservedWindow)) {
       Swal.fire({ icon: 'error', title: 'Print blocked', text: 'Please allow pop-ups to print receipts.' });
     }
   };
@@ -222,7 +227,6 @@ export default function POS() {
       });
       return;
     }
-
     const isLoan = paymentMethod === 'loan';
     const confirm = await Swal.fire({
       title: isLoan ? 'Record customer loan?' : 'Complete sale?',
@@ -232,8 +236,14 @@ export default function POS() {
       showCancelButton: true,
       confirmButtonText: isLoan ? 'Record loan' : 'Pay',
       icon: 'question',
+      preConfirm: () => {
+        if (!isLoan) receiptWindowRef.current = openReceiptWindow();
+      },
     });
-    if (!confirm.isConfirmed) return;
+    if (!confirm.isConfirmed) {
+      receiptWindowRef.current?.close();
+      return;
+    }
 
     try {
       const body = {
@@ -267,6 +277,7 @@ export default function POS() {
       if (!isLoan) {
         setLastReceiptItems(receiptItems);
         setLastSalePaymentMethod(paymentMethod);
+        printReceipt(receiptItems, paymentMethod, receiptWindowRef.current);
       }
       Swal.fire({
         toast: true,
@@ -290,6 +301,7 @@ export default function POS() {
       }
 
     } catch (err: unknown) {
+      receiptWindowRef.current?.close();
       const error = err as { data?: { message?: string }; message?: string };
       const msg = error.data?.message || error.message || 'Could not complete sale.';
       Swal.fire({ icon: 'error', title: 'Sale failed', text: msg });
