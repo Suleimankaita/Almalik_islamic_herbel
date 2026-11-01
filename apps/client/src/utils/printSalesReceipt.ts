@@ -148,7 +148,7 @@ export function printSalesReceipt(
 
     html,
     body {
-      width: 58mm;
+      width: 100%;
       min-width: 0;
       margin: 0;
       padding: 0;
@@ -158,16 +158,11 @@ export function printSalesReceipt(
 
     body {
       font-family: Arial, Helvetica, sans-serif;
-      font-size: 10.5pt;
       line-height: 1.35;
-<<<<<<< HEAD
-      font-weight:1000;
-=======
       font-weight: 600;
       color: #000;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
->>>>>>> 438f083870b348ea8771f80f7d23ef432d83dba9
     }
 
     .receipt {
@@ -187,21 +182,15 @@ export function printSalesReceipt(
 
     .logo {
       display: block;
-<<<<<<< HEAD
       width: 35px;
       height: 35px;
-=======
-      width: 26px;
-      height: 26px;
->>>>>>> 438f083870b348ea8771f80f7d23ef432d83dba9
-      object-fit: contain;
+      object-fit: cover;
       margin: 0 auto 2mm;
     }
 
     .store-name {
       margin: 0;
-<<<<<<< HEAD
-      font-size: 10px;
+      font-size: 8px;
       line-height: 1.3;
       font-weight: 1000;
     }
@@ -210,36 +199,31 @@ export function printSalesReceipt(
       margin: 1mm 0;
       font-size: 9px;
       font-weight: 1000;
-=======
-      font-size: 12pt;
+      font-size: 8px;
       line-height: 1.25;
       font-weight: 700;
     }
 
     .tagline {
       margin: 1.5mm 0;
-      font-size: 9pt;
-      font-weight: 600;
->>>>>>> 438f083870b348ea8771f80f7d23ef432d83dba9
+     font-size: 12pt;
+      font-weight: 700;
     }
 
     .contact {
       margin: 1.5mm 0 0;
-<<<<<<< HEAD
-      font-size: 8px;
-      font-weight:1000;
+      font-size: 6px;
       line-height: 1.5;
-=======
-      font-size: 9.5pt;
       line-height: 1.4;
->>>>>>> 438f083870b348ea8771f80f7d23ef432d83dba9
+      font-size: 8pt;
+      font-weight: 700;
       overflow-wrap: anywhere;
     }
 
     .receipt-title {
       margin: 3mm 0;
       text-align: center;
-      font-size: 12pt;
+      font-size: 8px;
       font-weight: 700;
       letter-spacing: 0;
     }
@@ -255,18 +239,15 @@ export function printSalesReceipt(
       justify-content: space-between;
       align-items: flex-start;
       gap: 2mm;
-<<<<<<< HEAD
       margin: 0 0 1.5mm;
       font-weight:500;
       font-size: 10px;
-=======
       width: 100%;
     }
 
     .detail-row {
       margin: 0 0 1.7mm;
       font-size: 10pt;
->>>>>>> 438f083870b348ea8771f80f7d23ef432d83dba9
     }
 
     .detail-label {
@@ -277,11 +258,7 @@ export function printSalesReceipt(
       flex: 1 1 auto;
       min-width: 0;
       text-align: right;
-<<<<<<< HEAD
-      font-weight: 800;
-=======
       font-weight: 700;
->>>>>>> 438f083870b348ea8771f80f7d23ef432d83dba9
       overflow-wrap: anywhere;
     }
 
@@ -314,12 +291,9 @@ export function printSalesReceipt(
 
     .variant {
       margin-top: 1mm;
-<<<<<<< HEAD
       font-weight:1000;
       font-size: 8px;
-=======
       font-size: 9.5pt;
->>>>>>> 438f083870b348ea8771f80f7d23ef432d83dba9
       overflow-wrap: anywhere;
     }
 
@@ -331,11 +305,8 @@ export function printSalesReceipt(
     .item-quantity {
       flex: 1 1 auto;
       min-width: 0;
-<<<<<<< HEAD
       font-size: 8.5px;
       font-weight:1000;
-=======
->>>>>>> 438f083870b348ea8771f80f7d23ef432d83dba9
       overflow-wrap: anywhere;
     }
 
@@ -353,17 +324,13 @@ export function printSalesReceipt(
     }
 
     .total-row {
-<<<<<<< HEAD
       display: flex;
       justify-content: space-between;
       align-items: flex-start;
       gap: 2mm;
       padding: 1mm 0;
       font-size:8px;
-=======
       padding: 1.2mm 0;
-      font-size: 10pt;
->>>>>>> 438f083870b348ea8771f80f7d23ef432d83dba9
     }
 
     .total-value {
@@ -374,17 +341,12 @@ export function printSalesReceipt(
     .grand-total {
       margin-top: 1.5mm;
       padding: 2mm 0;
-<<<<<<< HEAD
       border-top: 1px solid #000;
       border-bottom: 1px solid #000;
       font-size: 10px;
-      font-weight: 1000;
-=======
       border-top: 0.3mm solid #000;
       border-bottom: 0.3mm solid #000;
-      font-size: 12pt;
       font-weight: 700;
->>>>>>> 438f083870b348ea8771f80f7d23ef432d83dba9
     }
 
     .footer {
@@ -392,32 +354,22 @@ export function printSalesReceipt(
       padding-top: 2mm;
       border-top: 0.25mm solid #000;
       text-align: center;
-      font-weight:1000;
+      font-weight:700;
     }
 
     .receipt-number {
       margin: 0 0 2mm;
-<<<<<<< HEAD
       font-family: monospace;
       font-size: 9px;
-      font-weight: 1000;
-=======
       font-family: "Courier New", monospace;
-      font-size: 9pt;
       font-weight: 700;
->>>>>>> 438f083870b348ea8771f80f7d23ef432d83dba9
       overflow-wrap: anywhere;
     }
 
     .thank-you {
       margin: 2mm 0;
-<<<<<<< HEAD
       font-size: 10px;
-      font-weight: 1000;
-=======
-      font-size: 10pt;
       font-weight: 700;
->>>>>>> 438f083870b348ea8771f80f7d23ef432d83dba9
     }
 
     .footer-note {
